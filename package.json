@@ -1,8 +1,7 @@
-
 {
   "name": "meu-projeto",
-  "version": "6.0.0",
-  "description": "Backend e Frontend organizados",
+  "version": "7.0.0",
+  "description": "Backend com Anthropic API",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js"
@@ -10,7 +9,7 @@
   "dependencies": {
     "express": "^4.18.2",
     "dotenv": "^16.3.1",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
     "@anthropic-ai/sdk": "^0.27.0"
   }
 }
