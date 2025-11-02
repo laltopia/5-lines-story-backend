@@ -16,9 +16,15 @@ document.getElementById('aiForm').addEventListener('submit', async (e) => {
   responseBox.classList.remove('show');
   
   try {
+    // Get Clerk session token
+    const token = await window.Clerk.session.getToken();
+    
     const response = await fetch('/api/ai/process', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({ userInput })
     });
     
@@ -29,7 +35,7 @@ document.getElementById('aiForm').addEventListener('submit', async (e) => {
     
     if (data.success) {
       responseBox.innerHTML = `
-        <h3 style="color: #667eea; margin-bottom: 15px;">📖 História Gerada:</h3>
+        <h3 style="color: #6366f1; margin-bottom: 15px;">📖 História Gerada:</h3>
         ${data.aiResponse}
       `;
       responseBox.classList.add('show');
