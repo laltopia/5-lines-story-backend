@@ -1,86 +1,106 @@
-// Carregar histórico ao abrir a página
-document.addEventListener('DOMContentLoaded', () => {
-  loadHistory();
+const express = require('express');
+const router = express.Router();
+const Anthropic = require('@anthropic-ai/sdk');
+const supabase = require('../config/supabase');
+const { requireAuthentication } = require('../middleware/auth');
+
+// Inicializar cliente Anthropic
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Form de processar IA
-document.getElementById('aiForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const userInput = document.getElementById('userInput').value;
-  const loading = document.getElementById('loading');
-  const responseBox = document.getElementById('response');
-  
-  // Mostrar loading
-  loading.classList.add('show');
-  responseBox.classList.remove('show');
-  
+// Prompt predeterminado
+const SYSTEM_PROMPT = `Você é um assistente especializado em criar histórias criativas.
+Quando o usuário te passar um tema ou ideia, você deve:
+1. Criar uma história curta (3-5 parágrafos)
+2. Usar linguagem envolvente e descritiva
+3. Incluir início, meio e fim
+4. Ser criativo e original
+
+Responda sempre em português do Brasil.`;
+
+// POST - Processar texto do usuário (PROTEGIDO)
+router.post('/process', requireAuthentication, async (req, res) => {
   try {
-    // Get Clerk session token
-    const token = await window.Clerk.session.getToken();
+    const { userInput } = req.body;
+    const userId = req.auth.userId; // ID do usuário do Clerk
     
-    const response = await fetch('/api/ai/process', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ userInput })
+    if (!userInput || userInput.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'User input is required' 
+      });
+    }
+
+    // Chamar API da Anthropic
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: userInput
+        }
+      ]
     });
-    
-    const data = await response.json();
-    
-    // Esconder loading
-    loading.classList.remove('show');
-    
-    if (data.success) {
-      responseBox.innerHTML = `
-        <h3 style="color: #6366f1; margin-bottom: 15px;">📖 História Gerada:</h3>
-        ${data.aiResponse}
-      `;
-      responseBox.classList.add('show');
-      
-      // Limpar form
-      document.getElementById('userInput').value = '';
-      
-      // Atualizar histórico
-      setTimeout(loadHistory, 1000);
-    } else {
-      responseBox.innerHTML = `<p style="color: #721c24;">❌ Erro: ${data.error}</p>`;
-      responseBox.classList.add('show');
-    }
+
+    const aiResponse = message.content[0].text;
+
+    // Salvar no banco com user_id do Clerk
+    const { data, error } = await supabase
+      .from('conversations')
+      .insert([{
+        user_input: userInput,
+        ai_response: aiResponse,
+        prompt_used: SYSTEM_PROMPT,
+        user_id: userId // IMPORTANTE: Salvar user_id
+      }])
+      .select();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      userInput: userInput,
+      aiResponse: aiResponse,
+      conversationId: data[0].id
+    });
+
   } catch (error) {
-    loading.classList.remove('show');
-    responseBox.innerHTML = `<p style="color: #721c24;">❌ Erro: ${error.message}</p>`;
-    responseBox.classList.add('show');
+    console.error('Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
-// Carregar histórico
-async function loadHistory() {
-  const historyDiv = document.getElementById('history');
-  historyDiv.innerHTML = '<p class="loading">Carregando histórico...</p>';
-  
+// GET - Buscar histórico de conversas (PROTEGIDO E FILTRADO POR USUÁRIO)
+router.get('/history', requireAuthentication, async (req, res) => {
   try {
-    const response = await fetch('/api/ai/history');
-    const data = await response.json();
+    const userId = req.auth.userId; // ID do usuário do Clerk
     
-    if (data.success && data.conversations.length > 0) {
-      historyDiv.innerHTML = data.conversations.map(conv => `
-        <div class="history-item">
-          <h4>💭 Tema:</h4>
-          <div class="user-input">${conv.user_input}</div>
-          <h4>📖 História:</h4>
-          <div class="ai-response">${conv.ai_response}</div>
-          <p style="font-size: 0.8rem; color: #999; margin-top: 10px;">
-            ${new Date(conv.created_at).toLocaleString('pt-BR')}
-          </p>
-        </div>
-      `).join('');
-    } else {
-      historyDiv.innerHTML = '<p class="loading">Nenhuma história gerada ainda.</p>';
-    }
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('user_id', userId) // IMPORTANTE: Filtrar por user_id
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      count: data.length,
+      conversations: data
+    });
   } catch (error) {
-    historyDiv.innerHTML = '<p class="loading">Erro ao carregar histórico.</p>';
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
-}
+});
+
+module.exports = router;
