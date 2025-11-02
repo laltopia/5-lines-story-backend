@@ -34,4 +34,195 @@
       font-size: 20px;
       font-weight: 600;
       color: #111827;
-      text-
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      font-size: 28px;
+    }
+
+    .login-btn {
+      padding: 10px 24px;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .login-btn:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    /* Main Content */
+    .main-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 40px;
+      text-align: center;
+    }
+
+    .main-title {
+      font-size: 48px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .main-subtitle {
+      font-size: 20px;
+      color: #6b7280;
+      margin-bottom: 60px;
+    }
+
+    /* Cards Container */
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 48px 32px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .card:hover {
+      border-color: #9ca3af;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: translateY(-4px);
+    }
+
+    .card-icon {
+      width: 64px;
+      height: 64px;
+      background: #f3f4f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 28px;
+      color: #6b7280;
+    }
+
+    .card-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .card-description {
+      font-size: 16px;
+      color: #6b7280;
+    }
+
+    .coming-soon {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .coming-soon:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .footer a {
+      color: #6b7280;
+      text-decoration: none;
+      margin: 0 12px;
+    }
+
+    .footer a:hover {
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="logo">
+      <span class="logo-icon">✨</span>
+      <span>5 Lines Story</span>
+    </a>
+    <a href="#" class="login-btn">Log In</a>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <h1 class="main-title">Transform your ideas into compelling stories</h1>
+    <p class="main-subtitle">Choose how you'd like to share your content</p>
+
+    <div class="cards-container">
+      <!-- Text Card -->
+      <a href="/ai.html" class="card">
+        <div class="card-icon">📝</div>
+        <h3 class="card-title">Text</h3>
+        <p class="card-description">Paste or type content</p>
+      </a>
+
+      <!-- Audio Card -->
+      <div class="card coming-soon">
+        <div class="card-icon">🎤</div>
+        <h3 class="card-title">Audio</h3>
+        <p class="card-description">Record your voice</p>
+        <span class="badge">Coming Soon</span>
+      </div>
+
+      <!-- Document Card -->
+      <div class="card coming-soon">
+        <div class="card-icon">📄</div>
+        <h3 class="card-title">Document</h3>
+        <p class="card-description">Upload PDF, PPT, DOC</p>
+        <span class="badge">Coming Soon</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>
+      <a href="/api/health">Health Check</a>
+      <a href="/api/users">API Users</a>
+      <a href="/users.html">Manage Users</a>
+    </p>
+    <p style="margin-top: 12px;">Version 8.0 - Powered by Claude & Supabase</p>
+  </footer>
+</body>
+</html>
