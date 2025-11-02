@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Story Generator</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .ai-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .prompt-box {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .input-area {
+      width: 100%;
+      min-height: 120px;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .input-area:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .response-box {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      display: none;
+    }
+
+    .response-box.show {
+      display: block;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .history-item {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-left: 4px solid #667eea;
+    }
+
+    .history-item h4 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .history-item .user-input {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .history-item .ai-response {
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .nav-link {
+      display: inline-block;
+      color: white;
+      text-decoration: none;
+      margin: 0 10px;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .nav-link:hover {
+      background: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="ai-container">
+    <header>
+      <h1>🤖 AI Story Generator</h1>
+      <p class="version">Versao 7.0 - Powered by Claude</p>
+      <nav>
+        <a href="/" class="nav-link">Home</a>
+        <a href="/ai.html" class="nav-link">AI Generator</a>
+      </nav>
+    </header>
+
+    <section class="card prompt-box">
+      <h2>Gerar História com IA</h2>
+      <p style="color: #666; margin-bottom: 20px;">
+        Digite um tema ou ideia e a IA vai criar uma história criativa para você!
+      </p>
+      
+      <form id="aiForm">
+        <textarea 
+          class="input-area" 
+          id="userInput" 
+          placeholder="Ex: Uma aventura espacial com dragões...&#10;Ex: Um detetive que resolve crimes usando origami...&#10;Ex: Um mundo onde as cores têm sabores..."
+          required
+        ></textarea>
+        
+        <button type="submit" class="btn-primary" style="margin-top: 15px;">
+          ✨ Gerar História
+        </button>
+      </form>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Claude está escrevendo sua história...</p>
+      </div>
+
+      <div class="response-box" id="response"></div>
+    </section>
+
+    <section class="card">
+      <h2>📚 Histórico de Histórias</h2>
+      <button onclick="loadHistory()" class="btn-secondary">Atualizar Histórico</button>
+      <div id="history"></div>
+    </section>
+  </div>
+
+  <script src="/ai.js"></script>
+</body>
+</html>
