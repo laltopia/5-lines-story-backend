@@ -6,128 +6,243 @@
   <title>AI Story Generator</title>
   <link rel="stylesheet" href="/styles.css">
   <style>
-    .ai-container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-    .prompt-box {
-      background: white;
-      border-radius: 12px;
-      padding: 30px;
-      margin-bottom: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: #f8f9fa;
+    min-height: 100vh;
+  }
 
-    .input-area {
-      width: 100%;
-      min-height: 120px;
-      padding: 15px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-family: inherit;
-      resize: vertical;
-    }
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+  }
 
-    .input-area:focus {
-      outline: none;
-      border-color: #667eea;
-    }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    text-decoration: none;
+  }
 
-    .response-box {
-      background: #f8f9fa;
-      border-left: 4px solid #667eea;
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 20px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-      display: none;
-    }
+  .back-btn {
+    padding: 10px 24px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
 
-    .response-box.show {
-      display: block;
-    }
+  .back-btn:hover {
+    background: #f9fafb;
+  }
 
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 20px;
-      color: #667eea;
-    }
+  /* Container */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
 
-    .loading.show {
-      display: block;
-    }
+  .page-title {
+    font-size: 36px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 12px;
+    text-align: center;
+  }
 
-    .spinner {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #667eea;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
+  .page-subtitle {
+    font-size: 18px;
+    color: #6b7280;
+    margin-bottom: 40px;
+    text-align: center;
+  }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+  /* Card */
+  .card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
 
-    .history-item {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      border-left: 4px solid #667eea;
-    }
+  .card h2 {
+    font-size: 24px;
+    color: #111827;
+    margin-bottom: 20px;
+  }
 
-    .history-item h4 {
-      color: #667eea;
-      margin-bottom: 10px;
-    }
+  /* Form */
+  textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 16px;
+  }
 
-    .history-item .user-input {
-      background: #f0f0f0;
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      font-style: italic;
-    }
+  textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
 
-    .history-item .ai-response {
-      color: #555;
-      line-height: 1.6;
-    }
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-    .nav-link {
-      display: inline-block;
-      color: white;
-      text-decoration: none;
-      margin: 0 10px;
-      padding: 8px 16px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 6px;
-      transition: all 0.3s;
-    }
+  .btn-primary:hover {
+    background: #4f46e5;
+  }
 
-    .nav-link:hover {
-      background: rgba(255,255,255,0.3);
-    }
-  </style>
+  .btn-secondary {
+    padding: 10px 20px;
+    background: #f3f4f6;
+    color: #374151;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+
+  /* Response Box */
+  .response-box {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+    white-space: pre-wrap;
+    line-height: 1.7;
+    display: none;
+  }
+
+  .response-box.show {
+    display: block;
+  }
+
+  .response-box h3 {
+    color: #6366f1;
+    margin-bottom: 12px;
+  }
+
+  /* Loading */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 40px;
+  }
+
+  .loading.show {
+    display: block;
+  }
+
+  .spinner {
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #6366f1;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* History */
+  .history-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .history-item h4 {
+    color: #6366f1;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .history-item .user-input {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-style: italic;
+    color: #374151;
+  }
+
+  .history-item .ai-response {
+    color: #4b5563;
+    line-height: 1.6;
+  }
+
+  .history-item .timestamp {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 12px;
+  }
+</style>
 </head>
 <body>
   <div class="ai-container">
-    <header>
-      <h1>🤖 AI Story Generator</h1>
-      <p class="version">Versao 7.0 - Powered by Claude</p>
-      <nav>
-        <a href="/" class="nav-link">Home</a>
-        <a href="/ai.html" class="nav-link">AI Generator</a>
-      </nav>
-    </header>
+    <body>
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="logo">
+      <span style="font-size: 28px;">✨</span>
+      <span>5 Lines Story</span>
+    </a>
+    <a href="/" class="back-btn">← Back to Home</a>
+  </header>
+
+  <div class="container">
+    <h1 class="page-title">🤖 AI Story Generator</h1>
+    <p class="page-subtitle">Digite um tema e deixe a IA criar uma história incrível para você</p>
 
     <section class="card prompt-box">
       <h2>Gerar História com IA</h2>
