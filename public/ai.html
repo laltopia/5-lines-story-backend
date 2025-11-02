@@ -238,18 +238,23 @@
   ></script>
 </head>
 <body>
-  <div class="ai-container">
-    <body>
   <!-- Header -->
   <header class="header">
     <a href="/" class="logo">
       <span style="font-size: 28px;">✨</span>
       <span>5 Lines Story</span>
     </a>
-    <a href="/" class="back-btn">← Back to Home</a>
+    <div id="user-button"></div>
   </header>
 
-  <div class="container">
+  <!-- Loading Screen -->
+  <div id="auth-loading" style="text-align: center; padding: 100px 20px;">
+    <div class="spinner"></div>
+    <p style="color: #6b7280; margin-top: 20px;">Checking authentication...</p>
+  </div>
+
+  <!-- Main Content (Hidden until authenticated) -->
+  <div class="container" id="main-content" style="display: none;">
     <h1 class="page-title">🤖 AI Story Generator</h1>
     <p class="page-subtitle">Digite um tema e deixe a IA criar uma história incrível para você</p>
 
@@ -287,6 +292,26 @@
     </section>
   </div>
 
+  <script>
+    // Check authentication
+    window.addEventListener("load", async function () {
+      await window.Clerk.load();
+      
+      const authLoading = document.getElementById('auth-loading');
+      const mainContent = document.getElementById('main-content');
+      const userButtonDiv = document.getElementById('user-button');
+      
+      if (window.Clerk.user) {
+        // User is authenticated
+        window.Clerk.mountUserButton(userButtonDiv);
+        authLoading.style.display = 'none';
+        mainContent.style.display = 'block';
+      } else {
+        // User is NOT authenticated - redirect to home
+        window.location.href = '/';
+      }
+    });
+  </script>
   <script src="/ai.js"></script>
 </body>
 </html>
