@@ -56,7 +56,44 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+}
+});
+
+// NOVO: Criar usuário
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Nome e email são obrigatórios' 
+      });
+    }
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ name, email }])
+      .select();
+    
+    if (error) throw error;
+    
+    res.json({ 
+      success: true, 
+      message: 'Usuário criado com sucesso!',
+      user: data[0] 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
+
+
 app.listen(PORT, () => {
   console.log('Servidor rodando na porta ' + PORT);
 });
