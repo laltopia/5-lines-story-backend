@@ -11,15 +11,15 @@ const supabase = createClient(
   process.env.SUPABASE_KEY || ''
 );
 
-// Página inicial
+// Pagina inicial
 app.get('/', (req, res) => {
   res.send(`
-    <h1>Backend com Supabase - Versão 4.0 🚀</h1>
-    <p>Endpoints disponíveis:</p>
+    <h1>Backend com Supabase - Versao 4.0</h1>
+    <p>Endpoints disponiveis:</p>
     <ul>
-      <li><a href="/api/users">/api/users</a> - Ver todos os usuários</li>
-      <li>POST /api/users - Criar novo usuário</li>
-      <li><a href="/health">/health</a> - Status da conexão</li>
+      <li><a href="/api/users">/api/users</a> - Ver todos os usuarios</li>
+      <li>POST /api/users - Criar novo usuario</li>
+      <li><a href="/health">/health</a> - Status da conexao</li>
     </ul>
   `);
 });
@@ -34,7 +34,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Buscar todos os usuários
+// Buscar todos os usuarios
 app.get('/api/users', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -57,7 +57,7 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Criar novo usuário
+// Criar novo usuario
 app.post('/api/users', async (req, res) => {
   try {
     const { name, email } = req.body;
@@ -65,4 +65,31 @@ app.post('/api/users', async (req, res) => {
     if (!name || !email) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Nome e email são obrigatór
+        error: 'Name and email are required' 
+      });
+    }
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ name, email }])
+      .select();
+    
+    if (error) throw error;
+    
+    res.json({ 
+      success: true, 
+      message: 'User created successfully!',
+      user: data[0] 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log('Server running on port ' + PORT);
+});
