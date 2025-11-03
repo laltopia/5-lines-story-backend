@@ -7,7 +7,7 @@ const {
   getPrompt, 
   detectLanguage, 
   estimateTokens 
-} = require('../config/prompts-v2');
+} = require('../config/prompts');  
 
 // Inicializar cliente Anthropic
 const anthropic = new Anthropic({
