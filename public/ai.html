@@ -3,231 +3,377 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Story Generator</title>
-  <link rel="stylesheet" href="/styles.css">
+  <title>5 Lines Story - Create Your Story</title>
+  
   <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    background: #f8f9fa;
-    min-height: 100vh;
-  }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: #f8f9fa;
+      min-height: 100vh;
+    }
 
-  /* Header */
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 40px;
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-  }
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 20px;
-    font-weight: 600;
-    color: #111827;
-    text-decoration: none;
-  }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      text-decoration: none;
+    }
 
-  .back-btn {
-    padding: 10px 24px;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-  }
+    /* Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
 
-  .back-btn:hover {
-    background: #f9fafb;
-  }
+    /* Progress Steps */
+    .progress-steps {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
 
-  /* Container */
-  .container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 40px 20px;
-  }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      max-width: 150px;
+    }
 
-  .page-title {
-    font-size: 36px;
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 12px;
-    text-align: center;
-  }
+    .step-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 18px;
+      transition: all 0.3s;
+    }
 
-  .page-subtitle {
-    font-size: 18px;
-    color: #6b7280;
-    margin-bottom: 40px;
-    text-align: center;
-  }
+    .step.active .step-circle {
+      background: #6366f1;
+      color: white;
+    }
 
-  /* Card */
-  .card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    padding: 32px;
-    margin-bottom: 24px;
-  }
+    .step.completed .step-circle {
+      background: #10b981;
+      color: white;
+    }
 
-  .card h2 {
-    font-size: 24px;
-    color: #111827;
-    margin-bottom: 20px;
-  }
+    .step-label {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+      text-align: center;
+    }
 
-  /* Form */
-  textarea {
-    width: 100%;
-    min-height: 150px;
-    padding: 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
-    font-size: 16px;
-    font-family: inherit;
-    resize: vertical;
-    margin-bottom: 16px;
-  }
+    .step.active .step-label {
+      color: #111827;
+      font-weight: 600;
+    }
 
-  textarea:focus {
-    outline: none;
-    border-color: #6366f1;
-  }
+    .step-connector {
+      flex: 1;
+      height: 2px;
+      background: #e5e7eb;
+      margin: 0 -8px;
+    }
 
-  .btn-primary {
-    width: 100%;
-    padding: 14px;
-    background: #6366f1;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+    /* Cards */
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
 
-  .btn-primary:hover {
-    background: #4f46e5;
-  }
+    .card-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
 
-  .btn-secondary {
-    padding: 10px 20px;
-    background: #f3f4f6;
-    color: #374151;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    margin-bottom: 20px;
-  }
+    .card-subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
 
-  .btn-secondary:hover {
-    background: #e5e7eb;
-  }
+    /* Forms */
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
 
-  /* Response Box */
-  .response-box {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 20px;
-    white-space: pre-wrap;
-    line-height: 1.7;
-    display: none;
-  }
+    textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
 
-  .response-box.show {
-    display: block;
-  }
+    /* Buttons */
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-  .response-box h3 {
-    color: #6366f1;
-    margin-bottom: 12px;
-  }
+    .btn-primary {
+      background: #6366f1;
+      color: white;
+    }
 
-  /* Loading */
-  .loading {
-    display: none;
-    text-align: center;
-    padding: 40px;
-  }
+    .btn-primary:hover {
+      background: #4f46e5;
+    }
 
-  .loading.show {
-    display: block;
-  }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
 
-  .spinner {
-    border: 3px solid #f3f4f6;
-    border-top: 3px solid #6366f1;
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 16px;
-  }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
 
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
+    .btn-full {
+      width: 100%;
+    }
 
-  /* History */
-  .history-item {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
-  }
+    /* Path Cards */
+    .paths-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
 
-  .history-item h4 {
-    color: #6366f1;
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
+    .path-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-  .history-item .user-input {
-    background: white;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    font-style: italic;
-    color: #374151;
-  }
+    .path-card:hover {
+      border-color: #6366f1;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+    }
 
-  .history-item .ai-response {
-    color: #4b5563;
-    line-height: 1.6;
-  }
+    .path-card.selected {
+      border-color: #6366f1;
+      background: #f0f9ff;
+    }
 
-  .history-item .timestamp {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-top: 12px;
-  }
-</style>
-  <!-- Clerk Frontend API -->
+    .path-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .path-description {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .path-focus {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 12px;
+      background: #f3f4f6;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6b7280;
+    }
+
+    /* Custom Path */
+    .custom-path {
+      background: #fef3c7;
+      border: 2px dashed #fbbf24;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 16px;
+    }
+
+    .custom-path textarea {
+      min-height: 80px;
+      background: white;
+    }
+
+    /* Story Lines */
+    .story-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .story-line {
+      position: relative;
+    }
+
+    .line-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+    }
+
+    .line-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #6366f1;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .line-content {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #111827;
+      position: relative;
+    }
+
+    .line-content.editable {
+      cursor: pointer;
+    }
+
+    .line-content.editable:hover {
+      border-color: #6366f1;
+    }
+
+    .line-content.editing {
+      padding: 0;
+      border-color: #6366f1;
+    }
+
+    .line-content textarea {
+      border: none;
+      min-height: 100px;
+    }
+
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+    }
+
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #6366f1;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Hidden */
+    .hidden {
+      display: none;
+    }
+
+    /* Usage Bar */
+    .usage-bar {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .usage-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #f3f4f6;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #6366f1;
+      transition: width 0.3s;
+    }
+  </style>
+
+  <!-- Clerk -->
   <script
     async
     crossorigin="anonymous"
@@ -247,51 +393,127 @@
     <div id="user-button"></div>
   </header>
 
-  <!-- Loading Screen -->
-  <div id="auth-loading" style="text-align: center; padding: 100px 20px;">
+  <!-- Loading Auth -->
+  <div id="auth-loading" class="loading">
     <div class="spinner"></div>
-    <p style="color: #6b7280; margin-top: 20px;">Checking authentication...</p>
+    <p style="color: #6b7280;">Checking authentication...</p>
   </div>
 
-  <!-- Main Content (Hidden until authenticated) -->
-  <div class="container" id="main-content" style="display: none;">
-    <h1 class="page-title">🤖 AI Story Generator</h1>
-    <p class="page-subtitle">Digite um tema e deixe a IA criar uma história incrível para você</p>
+  <!-- Main Content -->
+  <div class="container hidden" id="main-content">
+    
+    <!-- Usage Bar -->
+    <div class="usage-bar" id="usageBar">
+      <div class="usage-stats">
+        <span id="usageText">Loading usage...</span>
+        <span id="usageNumbers">0/5 stories</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+    </div>
 
-    <section class="card prompt-box">
-      <h2>Gerar História com IA</h2>
-      <p style="color: #666; margin-bottom: 20px;">
-        Digite um tema ou ideia e a IA vai criar uma história criativa para você!
-      </p>
+    <!-- Progress Steps -->
+    <div class="progress-steps">
+      <div class="step active" id="step1">
+        <div class="step-circle">1</div>
+        <div class="step-label">Your Input</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step" id="step2">
+        <div class="step-circle">2</div>
+        <div class="step-label">Choose Path</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step" id="step3">
+        <div class="step-circle">3</div>
+        <div class="step-label">Your Story</div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Input -->
+    <div class="card" id="inputStep">
+      <h2 class="card-title">🎭 What's your story?</h2>
+      <p class="card-subtitle">Share your idea, experience, or message in any language</p>
       
-      <form id="aiForm">
-        <textarea 
-          class="input-area" 
-          id="userInput" 
-          placeholder="Ex: Uma aventura espacial com dragões...&#10;Ex: Um detetive que resolve crimes usando origami...&#10;Ex: Um mundo onde as cores têm sabores..."
-          required
-        ></textarea>
-        
-        <button type="submit" class="btn-primary" style="margin-top: 15px;">
-          ✨ Gerar História
+      <textarea 
+        id="userInput" 
+        placeholder="Example: A 40-year-old woman decides to restart her life...&#10;Exemplo: Uma mulher de 40 anos decide recomeçar a vida...&#10;Ejemplo: Una mujer de 40 años decide reiniciar su vida..."
+        required
+      ></textarea>
+      
+      <div style="margin-top: 20px; display: flex; gap: 12px;">
+        <button class="btn btn-primary btn-full" onclick="submitInput()">
+          ✨ Generate Story Paths
         </button>
-      </form>
-
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p>Claude está escrevendo sua história...</p>
       </div>
 
-      <div class="response-box" id="response"></div>
-    </section>
+      <!-- Future: Audio & Document upload -->
+      <div style="margin-top: 16px; padding: 16px; background: #f9fafb; border-radius: 12px; text-align: center;">
+        <p style="font-size: 14px; color: #9ca3af;">
+          🎤 Audio & 📄 Document input coming soon!
+        </p>
+      </div>
+    </div>
 
-    <section class="card">
-      <h2>📚 Histórico de Histórias</h2>
-      <button onclick="loadHistory()" class="btn-secondary">Atualizar Histórico</button>
-      <div id="history"></div>
-    </section>
+    <!-- STEP 2: Choose Path -->
+    <div class="card hidden" id="pathStep">
+      <h2 class="card-title">🛤️ Choose Your Story Direction</h2>
+      <p class="card-subtitle">Pick one of these paths, or describe your own</p>
+      
+      <div id="loading1" class="loading hidden">
+        <div class="spinner"></div>
+        <p style="color: #6b7280;">AI is analyzing your input...</p>
+      </div>
+
+      <div class="paths-grid" id="pathsGrid"></div>
+
+      <div class="custom-path">
+        <p style="font-size: 14px; font-weight: 600; color: #92400e; margin-bottom: 8px;">
+          💡 Or describe how you imagined it:
+        </p>
+        <textarea 
+          id="customPath" 
+          placeholder="Describe the direction you want for your story..."
+        ></textarea>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 12px;">
+        <button class="btn btn-secondary" onclick="goToStep(1)">
+          ← Back
+        </button>
+        <button class="btn btn-primary btn-full" onclick="generateStory()">
+          ✨ Generate 5 Lines
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Story Display & Edit -->
+    <div class="card hidden" id="storyStep">
+      <h2 class="card-title">📖 Your 5 Lines Story</h2>
+      <p class="card-subtitle">Click any line to edit it</p>
+      
+      <div id="loading2" class="loading hidden">
+        <div class="spinner"></div>
+        <p style="color: #6b7280;">Creating your story...</p>
+      </div>
+
+      <div class="story-lines" id="storyLines"></div>
+
+      <div style="margin-top: 32px; display: flex; gap: 12px;">
+        <button class="btn btn-secondary" onclick="startOver()">
+          🔄 Start Over
+        </button>
+        <button class="btn btn-primary" onclick="shareStory()">
+          📤 Share Story
+        </button>
+      </div>
+    </div>
+
   </div>
 
+  <script src="/ai-v3.js"></script>
+  
   <script>
     // Check authentication
     window.addEventListener("load", async function () {
@@ -302,16 +524,16 @@
       const userButtonDiv = document.getElementById('user-button');
       
       if (window.Clerk.user) {
-        // User is authenticated
         window.Clerk.mountUserButton(userButtonDiv);
         authLoading.style.display = 'none';
-        mainContent.style.display = 'block';
+        mainContent.classList.remove('hidden');
+        
+        // Load usage
+        loadUsage();
       } else {
-        // User is NOT authenticated - redirect to home
         window.location.href = '/';
       }
     });
   </script>
-  <script src="/ai.js"></script>
 </body>
 </html>
