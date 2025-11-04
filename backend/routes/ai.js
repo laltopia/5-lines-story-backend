@@ -3,11 +3,12 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const supabase = require('../config/supabase');
 const { requireAuthentication } = require('../middleware/auth');
+const { clerkClient } = require('@clerk/express');
 const { 
   getPrompt, 
   detectLanguage, 
   estimateTokens 
-} = require('../config/prompts');  
+} = require('../config/prompts');
 
 // Inicializar cliente Anthropic
 const anthropic = new Anthropic({
@@ -24,11 +25,47 @@ const PRICING = {
   }
 };
 
+// CONFIGURAÇÃO DE LIMITES POR PLANO
+const PLAN_LIMITS = {
+  'free': {
+    monthly_story_limit: 3,
+    tokens_limit_monthly: 5000
+  },
+  'plus': {
+    monthly_story_limit: 50,
+    tokens_limit_monthly: 75000
+  },
+  'pro': {
+    monthly_story_limit: 150,
+    tokens_limit_monthly: 220000
+  }
+};
+
 // ============================================
 // HELPERS
 // ============================================
 
 async function ensureUserLimit(userId) {
+  // 1. Buscar plano do usuário no Clerk
+  let userPlan = 'free'; // default
+  try {
+    const clerkUser = await clerkClient.users.getUser(userId);
+    userPlan = clerkUser.publicMetadata?.plan || 'free';
+    
+    // Validar que o plano existe
+    if (!PLAN_LIMITS[userPlan]) {
+      console.warn(`Invalid plan "${userPlan}" for user ${userId}, defaulting to free`);
+      userPlan = 'free';
+    }
+  } catch (error) {
+    console.error('Error fetching user from Clerk:', error);
+    // Continuar com plano free se houver erro
+  }
+
+  // 2. Obter limites do plano
+  const planLimits = PLAN_LIMITS[userPlan];
+
+  // 3. Verificar se usuário existe no banco
   const { data: existing } = await supabase
     .from('user_limits')
     .select('*')
@@ -36,14 +73,15 @@ async function ensureUserLimit(userId) {
     .single();
 
   if (!existing) {
+    // 3a. Criar novo usuário com limites do plano
     const { data: newLimit, error } = await supabase
       .from('user_limits')
       .insert([{
         user_id: userId,
-        plan_type: 'free',
-        monthly_story_limit: 5,
+        plan_type: userPlan,
+        monthly_story_limit: planLimits.monthly_story_limit,
+        tokens_limit_monthly: planLimits.tokens_limit_monthly,
         stories_used_this_month: 0,
-        tokens_limit_monthly: 10000,
         tokens_used_this_month: 0
       }])
       .select()
@@ -53,7 +91,28 @@ async function ensureUserLimit(userId) {
     return newLimit;
   }
 
-  // Verificar reset mensal
+  // 4. Verificar se plano mudou
+  if (existing.plan_type !== userPlan) {
+    console.log(`Plan changed for user ${userId}: ${existing.plan_type} → ${userPlan}`);
+    
+    // Atualizar limites baseado no novo plano
+    const { data: updated, error } = await supabase
+      .from('user_limits')
+      .update({
+        plan_type: userPlan,
+        monthly_story_limit: planLimits.monthly_story_limit,
+        tokens_limit_monthly: planLimits.tokens_limit_monthly,
+        updated_at: new Date()
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updated;
+  }
+
+  // 5. Verificar reset mensal
   const resetDate = new Date(existing.limit_reset_date);
   const now = new Date();
   
