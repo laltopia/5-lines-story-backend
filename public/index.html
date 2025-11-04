@@ -41,20 +41,42 @@
       font-size: 28px;
     }
 
-    .login-btn {
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .login-btn, .history-btn {
       padding: 10px 24px;
-      background: #6366f1;
-      color: white;
       border: none;
       border-radius: 8px;
       font-size: 15px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .login-btn {
+      background: #6366f1;
+      color: white;
     }
 
     .login-btn:hover {
       background: #4f46e5;
+    }
+
+    .history-btn {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .history-btn:hover {
+      background: #e5e7eb;
     }
 
     .main-content {
@@ -167,11 +189,8 @@
       color: #111827;
     }
 
-    /* Clerk User Button Styling */
-    #user-button-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .hidden {
+      display: none;
     }
   </style>
 </head>
@@ -181,8 +200,11 @@
       <span class="logo-icon">✨</span>
       <span>5 Lines Story</span>
     </a>
-    <div id="user-button-container">
-      <button class="login-btn" id="sign-in-btn" style="display: none;">Sign In</button>
+    <div class="header-actions">
+      <button class="login-btn hidden" id="sign-in-btn">Sign In</button>
+      <a href="/history.html" class="history-btn hidden" id="history-link">
+        📚 My Stories
+      </a>
       <div id="user-button"></div>
     </div>
   </header>
@@ -237,14 +259,16 @@
       await window.Clerk.load();
       
       const signInBtn = document.getElementById('sign-in-btn');
+      const historyLink = document.getElementById('history-link');
       const userButtonDiv = document.getElementById('user-button');
       
       if (window.Clerk.user) {
-        // User is signed in
+        // User is signed in - show user button and history link
         window.Clerk.mountUserButton(userButtonDiv);
+        historyLink.classList.remove('hidden');
       } else {
-        // User is NOT signed in
-        signInBtn.style.display = 'block';
+        // User is NOT signed in - show sign in button
+        signInBtn.classList.remove('hidden');
         signInBtn.onclick = () => window.Clerk.openSignIn();
       }
     });
