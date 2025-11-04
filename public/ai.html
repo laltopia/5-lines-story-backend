@@ -41,6 +41,32 @@
       text-decoration: none;
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .history-btn {
+      padding: 10px 20px;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .history-btn:hover {
+      background: #e5e7eb;
+    }
+
     /* Container */
     .container {
       max-width: 900px;
@@ -176,6 +202,15 @@
 
     .btn-secondary:hover {
       background: #e5e7eb;
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
     }
 
     .btn-full {
@@ -390,7 +425,12 @@
       <span style="font-size: 28px;">✨</span>
       <span>5 Lines Story</span>
     </a>
-    <div id="user-button"></div>
+    <div class="header-actions">
+      <a href="/history.html" class="history-btn">
+        📚 My Stories
+      </a>
+      <div id="user-button"></div>
+    </div>
   </header>
 
   <!-- Loading Auth -->
@@ -507,12 +547,15 @@
         <button class="btn btn-primary" onclick="shareStory()">
           📤 Share Story
         </button>
+        <button class="btn btn-success btn-full" onclick="saveAndGoToHistory()">
+          💾 Save & View History
+        </button>
       </div>
     </div>
 
   </div>
 
-  <script src="/ai.js"></script>  <!-- ✅ CERTO -->
+  <script src="/ai.js"></script>
   
   <script>
     // Check authentication
