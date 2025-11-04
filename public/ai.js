@@ -195,6 +195,9 @@ async function generateStory() {
       appState.conversationId = data.conversationId;
       renderStory(data.story);
       await loadUsage();
+      
+      // Mostrar notificação de sucesso
+      showNotification('✨ Story created successfully! You can edit any line or save it.');
     } else if (data.error === 'Limit reached') {
       alert(data.message);
       goToStep(2);
@@ -324,7 +327,7 @@ function cancelEdit() {
 // ============================================
 // SALVAR DIRETAMENTE (SEM IA)
 // ============================================
-async function saveEditDirectly(showNotification = true) {
+async function saveEditDirectly(showNotif = true) {
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
@@ -354,7 +357,7 @@ async function saveEditDirectly(showNotification = true) {
   appState.editingLine = null;
   appState.editingOriginalContent = null;
   
-  if (showNotification) {
+  if (showNotif) {
     showNotification(`Line ${lineNumber} saved! ✅`);
   }
 }
@@ -422,9 +425,27 @@ async function saveEditWithAI() {
 }
 
 // ============================================
+// SALVAR E IR PARA HISTÓRICO
+// ============================================
+async function saveAndGoToHistory() {
+  if (!appState.conversationId) {
+    alert('No story to save!');
+    return;
+  }
+  
+  // A história já foi salva automaticamente quando foi criada
+  // Apenas mostrar mensagem e redirecionar
+  showNotification('💾 Story saved! Redirecting to history...', 2000);
+  
+  setTimeout(() => {
+    window.location.href = '/history.html';
+  }, 2000);
+}
+
+// ============================================
 // NOTIFICAÇÃO
 // ============================================
-function showNotification(message) {
+function showNotification(message, duration = 3000) {
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed;
@@ -445,7 +466,7 @@ function showNotification(message) {
   setTimeout(() => {
     notification.style.animation = 'slideOut 0.3s ease-out';
     setTimeout(() => notification.remove(), 300);
-  }, 3000);
+  }, duration);
 }
 
 const style = document.createElement('style');
