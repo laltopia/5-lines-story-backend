@@ -51,10 +51,8 @@ async function loadUsage() {
 // NAVEGAÇÃO ENTRE STEPS
 // ============================================
 function goToStep(stepNumber) {
-  // Atualizar estado
   appState.currentStep = stepNumber;
   
-  // Atualizar UI dos steps
   document.querySelectorAll('.step').forEach((step, index) => {
     step.classList.remove('active', 'completed');
     if (index + 1 === stepNumber) {
@@ -64,7 +62,6 @@ function goToStep(stepNumber) {
     }
   });
   
-  // Mostrar/esconder cards
   document.getElementById('inputStep').classList.toggle('hidden', stepNumber !== 1);
   document.getElementById('pathStep').classList.toggle('hidden', stepNumber !== 2);
   document.getElementById('storyStep').classList.toggle('hidden', stepNumber !== 3);
@@ -82,11 +79,8 @@ async function submitInput() {
   }
   
   appState.userInput = input;
-  
-  // Ir para step 2
   goToStep(2);
   
-  // Mostrar loading
   document.getElementById('loading1').classList.remove('hidden');
   document.getElementById('pathsGrid').innerHTML = '';
   
@@ -109,8 +103,6 @@ async function submitInput() {
     if (data.success) {
       appState.suggestedPaths = data.paths;
       renderPaths(data.paths);
-      
-      // Atualizar uso
       await loadUsage();
     } else if (data.error === 'Limit reached') {
       alert(data.message);
@@ -146,16 +138,13 @@ function renderPaths(paths) {
 // SELECIONAR CAMINHO
 // ============================================
 function selectPath(index) {
-  // Remover seleção anterior
   document.querySelectorAll('.path-card').forEach(card => {
     card.classList.remove('selected');
   });
   
-  // Selecionar novo
   document.getElementById(`path-${index}`).classList.add('selected');
   appState.selectedPath = appState.suggestedPaths[index];
   
-  // Limpar custom path se tinha
   document.getElementById('customPath').value = '';
   appState.customPath = '';
 }
@@ -173,13 +162,11 @@ async function generateStory() {
   
   if (customPath) {
     appState.customPath = customPath;
-    appState.selectedPath = null; // Custom sobrescreve seleção
+    appState.selectedPath = null;
   }
   
-  // Ir para step 3
   goToStep(3);
   
-  // Mostrar loading
   document.getElementById('loading2').classList.remove('hidden');
   document.getElementById('storyLines').innerHTML = '';
   
@@ -207,8 +194,6 @@ async function generateStory() {
       appState.currentStory = data.story;
       appState.conversationId = data.conversationId;
       renderStory(data.story);
-      
-      // Atualizar uso
       await loadUsage();
     } else if (data.error === 'Limit reached') {
       alert(data.message);
@@ -259,10 +244,7 @@ function renderStory(story) {
 // EDITAR LINHA
 // ============================================
 function editLine(lineNumber) {
-  console.log('Editing line:', lineNumber);
-  
   if (appState.editingLine && appState.editingLine !== lineNumber) {
-    // Já está editando outra linha, cancela
     cancelEdit();
   }
   
@@ -271,25 +253,22 @@ function editLine(lineNumber) {
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
   const currentText = lineElement.textContent.trim();
   
-  console.log('Current text:', currentText);
-  
   lineElement.classList.add('editing');
   lineElement.classList.remove('editable');
-  lineElement.onclick = null; // Remove click handler
+  lineElement.onclick = null;
   
   lineElement.innerHTML = `
     <textarea id="edit-textarea-${lineNumber}" style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #6366f1; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical;">${currentText}</textarea>
     <div style="display: flex; gap: 8px; margin-top: 12px; padding: 12px; background: white;">
       <button class="btn btn-secondary" onclick="cancelEdit()" style="padding: 10px 20px;">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEdit()" style="padding: 10px 20px;">💫 Refine with AI</button>
+      <button class="btn btn-secondary" onclick="saveEditDirectly()" style="padding: 10px 20px;">💾 Save</button>
+      <button class="btn btn-primary" onclick="saveEditWithAI()" style="padding: 10px 20px; flex: 1;">✨ Refine with AI</button>
     </div>
   `;
   
-  // Focus no textarea
   const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
   if (textarea) {
     textarea.focus();
-    // Coloca cursor no final
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   }
 }
@@ -298,8 +277,6 @@ function editLine(lineNumber) {
 // CANCELAR EDIÇÃO
 // ============================================
 function cancelEdit() {
-  console.log('Canceling edit for line:', appState.editingLine);
-  
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
@@ -310,26 +287,55 @@ function cancelEdit() {
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = originalText;
-  lineElement.onclick = () => editLine(lineNumber); // Restaura click handler
+  lineElement.onclick = () => editLine(lineNumber);
   
   appState.editingLine = null;
 }
 
 // ============================================
-// SALVAR EDIÇÃO (REFINAR COM IA)
+// SALVAR DIRETAMENTE (SEM IA)
 // ============================================
-async function saveEdit() {
-  console.log('Saving edit for line:', appState.editingLine);
-  
+function saveEditDirectly() {
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
   const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
   
-  if (!textarea) {
-    console.error('Textarea not found');
+  if (!textarea) return;
+  
+  const newText = textarea.value.trim();
+  
+  if (!newText) {
+    alert('Please enter some text');
     return;
   }
+  
+  // Atualizar estado
+  const lineKey = `line${lineNumber}`;
+  appState.currentStory[lineKey] = newText;
+  
+  // Re-renderizar
+  const lineElement = document.getElementById(`line-content-${lineNumber}`);
+  lineElement.classList.remove('editing');
+  lineElement.classList.add('editable');
+  lineElement.textContent = newText;
+  lineElement.onclick = () => editLine(lineNumber);
+  
+  appState.editingLine = null;
+  
+  showNotification(`Line ${lineNumber} saved! ✅`);
+}
+
+// ============================================
+// SALVAR COM IA
+// ============================================
+async function saveEditWithAI() {
+  if (!appState.editingLine) return;
+  
+  const lineNumber = appState.editingLine;
+  const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
+  
+  if (!textarea) return;
   
   const newText = textarea.value.trim();
   
@@ -338,21 +344,12 @@ async function saveEdit() {
     return;
   }
   
-  console.log('New text:', newText);
-  
   // Mostrar loading
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
-  lineElement.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner"></div><p>Refining...</p></div>';
+  lineElement.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner"></div><p>Refining with AI...</p></div>';
   
   try {
     const token = await window.Clerk.session.getToken();
-    
-    console.log('Calling API with:', {
-      currentStory: appState.currentStory,
-      lineNumber: lineNumber,
-      userSuggestion: newText,
-      conversationId: appState.conversationId
-    });
     
     const response = await fetch('/api/ai/refine-line', {
       method: 'POST',
@@ -370,20 +367,12 @@ async function saveEdit() {
     
     const data = await response.json();
     
-    console.log('API response:', data);
-    
     if (data.success) {
-      // Atualizar estado com nova história
       appState.currentStory = data.story;
       appState.editingLine = null;
       
-      // Re-renderizar história completa
       renderStory(data.story);
-      
-      // Mostrar notificação
       showNotification(`Line ${lineNumber} refined! ${data.explanation}`);
-      
-      // Atualizar uso
       await loadUsage();
     } else {
       alert('Error refining line: ' + data.error);
@@ -423,7 +412,6 @@ function showNotification(message) {
   }, 3000);
 }
 
-// Adicionar animações CSS
 const style = document.createElement('style');
 style.textContent = `
   @keyframes slideIn {
@@ -479,18 +467,15 @@ function startOver() {
 function shareStory() {
   if (!appState.currentStory) return;
   
-  // Formatar história para compartilhamento
   const storyText = Object.entries(appState.currentStory)
     .map(([key, value], index) => `${index + 1}. ${value}`)
     .join('\n\n');
   
   const fullText = `My 5 Lines Story:\n\n${storyText}\n\nCreated with 5 Lines Story ✨`;
   
-  // Copiar para clipboard
   navigator.clipboard.writeText(fullText).then(() => {
     showNotification('Story copied to clipboard! 📋');
   }).catch(err => {
-    // Fallback: mostrar modal com texto
     const modal = document.createElement('div');
     modal.style.cssText = `
       position: fixed;
@@ -524,13 +509,15 @@ function shareStory() {
 // KEYBOARD SHORTCUTS
 // ============================================
 document.addEventListener('keydown', (e) => {
-  // ESC para cancelar edição
   if (e.key === 'Escape' && appState.editingLine) {
     cancelEdit();
   }
   
-  // Ctrl+Enter para salvar edição
   if (e.ctrlKey && e.key === 'Enter' && appState.editingLine) {
-    saveEdit();
+    saveEditDirectly();
+  }
+  
+  if (e.ctrlKey && e.shiftKey && e.key === 'Enter' && appState.editingLine) {
+    saveEditWithAI();
   }
 });
