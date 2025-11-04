@@ -9,7 +9,8 @@ let appState = {
   customPath: '',
   currentStory: null,
   conversationId: null,
-  editingLine: null
+  editingLine: null,
+  editingOriginalContent: null // Guardar conteúdo original para cancelar
 };
 
 // ============================================
@@ -35,7 +36,6 @@ async function loadUsage() {
       document.getElementById('progressFill').style.width = 
         `${stories.percentage}%`;
         
-      // Mudar cor se próximo do limite
       if (stories.percentage > 80) {
         document.getElementById('progressFill').style.background = '#ef4444';
       } else if (stories.percentage > 60) {
@@ -243,9 +243,10 @@ function renderStory(story) {
 // ============================================
 // EDITAR LINHA
 // ============================================
-function editLine(lineNumber) {
+async function editLine(lineNumber) {
+  // Se já está editando outra linha, salvar automaticamente
   if (appState.editingLine && appState.editingLine !== lineNumber) {
-    cancelEdit();
+    await saveEditDirectly(false); // false = não mostrar notificação
   }
   
   appState.editingLine = lineNumber;
@@ -253,16 +254,42 @@ function editLine(lineNumber) {
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
   const currentText = lineElement.textContent.trim();
   
+  // Guardar conteúdo original para poder cancelar
+  appState.editingOriginalContent = currentText;
+  
   lineElement.classList.add('editing');
   lineElement.classList.remove('editable');
   lineElement.onclick = null;
   
   lineElement.innerHTML = `
-    <textarea id="edit-textarea-${lineNumber}" style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #6366f1; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical;">${currentText}</textarea>
-    <div style="display: flex; gap: 8px; margin-top: 12px; padding: 12px; background: white;">
-      <button class="btn btn-secondary" onclick="cancelEdit()" style="padding: 10px 20px;">Cancel</button>
-      <button class="btn btn-secondary" onclick="saveEditDirectly()" style="padding: 10px 20px;">💾 Save</button>
-      <button class="btn btn-primary" onclick="saveEditWithAI()" style="padding: 10px 20px; flex: 1;">✨ Refine with AI</button>
+    <textarea 
+      id="edit-textarea-${lineNumber}" 
+      style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #6366f1; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical;"
+    >${currentText}</textarea>
+    <div style="display: flex; gap: 8px; margin-top: 12px; padding: 12px; background: white; align-items: center;">
+      <button 
+        class="btn btn-secondary" 
+        onclick="cancelEdit()" 
+        style="padding: 10px 20px;"
+      >
+        Cancel
+      </button>
+      <button 
+        onclick="saveEditDirectly(true)" 
+        style="width: 40px; height: 40px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s;"
+        onmouseover="this.style.background='#059669'"
+        onmouseout="this.style.background='#10b981'"
+        title="Save"
+      >
+        ✓
+      </button>
+      <button 
+        class="btn btn-primary" 
+        onclick="saveEditWithAI()" 
+        style="padding: 10px 20px; flex: 1;"
+      >
+        ✨ Refine with AI
+      </button>
     </div>
   `;
   
@@ -280,22 +307,24 @@ function cancelEdit() {
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
-  const lineKey = `line${lineNumber}`;
-  const originalText = appState.currentStory[lineKey];
+  const originalText = appState.editingOriginalContent;
   
+  // Restaurar conteúdo original
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = originalText;
   lineElement.onclick = () => editLine(lineNumber);
   
+  // Limpar estado de edição
   appState.editingLine = null;
+  appState.editingOriginalContent = null;
 }
 
 // ============================================
 // SALVAR DIRETAMENTE (SEM IA)
 // ============================================
-function saveEditDirectly() {
+async function saveEditDirectly(showNotification = true) {
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
@@ -314,16 +343,20 @@ function saveEditDirectly() {
   const lineKey = `line${lineNumber}`;
   appState.currentStory[lineKey] = newText;
   
-  // Re-renderizar
+  // Re-renderizar linha (sair do modo de edição)
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = newText;
   lineElement.onclick = () => editLine(lineNumber);
   
+  // Limpar estado de edição
   appState.editingLine = null;
+  appState.editingOriginalContent = null;
   
-  showNotification(`Line ${lineNumber} saved! ✅`);
+  if (showNotification) {
+    showNotification(`Line ${lineNumber} saved! ✅`);
+  }
 }
 
 // ============================================
@@ -369,7 +402,10 @@ async function saveEditWithAI() {
     
     if (data.success) {
       appState.currentStory = data.story;
+      
+      // Limpar estado de edição ANTES de re-renderizar
       appState.editingLine = null;
+      appState.editingOriginalContent = null;
       
       renderStory(data.story);
       showNotification(`Line ${lineNumber} refined! ${data.explanation}`);
@@ -451,7 +487,8 @@ function startOver() {
       customPath: '',
       currentStory: null,
       conversationId: null,
-      editingLine: null
+      editingLine: null,
+      editingOriginalContent: null
     };
     
     document.getElementById('userInput').value = '';
@@ -514,7 +551,7 @@ document.addEventListener('keydown', (e) => {
   }
   
   if (e.ctrlKey && e.key === 'Enter' && appState.editingLine) {
-    saveEditDirectly();
+    saveEditDirectly(true);
   }
   
   if (e.ctrlKey && e.shiftKey && e.key === 'Enter' && appState.editingLine) {
