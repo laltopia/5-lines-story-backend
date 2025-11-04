@@ -27,17 +27,12 @@ const PRICING = {
 // ============================================
 // 🔥 SEM LIMITES - MODO TESTE TOTAL
 // ============================================
-// Removida TODA lógica de verificação de planos e limites
-// Apenas tracking para análise futura
 
 // ============================================
 // HELPERS SIMPLIFICADOS
 // ============================================
 
 async function ensureUserTracking(userId) {
-  // Apenas garante que usuário existe na tabela para tracking
-  // SEM nenhuma verificação de limite
-  
   const { data: existing } = await supabase
     .from('user_limits')
     .select('*')
@@ -45,7 +40,6 @@ async function ensureUserTracking(userId) {
     .single();
 
   if (!existing) {
-    // Criar com valores super altos (praticamente ilimitado)
     const { data: newUser, error } = await supabase
       .from('user_limits')
       .insert([{
@@ -89,7 +83,6 @@ async function callClaude(systemPrompt, userMessage) {
 }
 
 async function updateTokenUsage(userId, tokensToAdd) {
-  // Buscar valor atual
   const { data: current } = await supabase
     .from('user_limits')
     .select('tokens_used_this_month')
@@ -98,7 +91,6 @@ async function updateTokenUsage(userId, tokensToAdd) {
 
   if (!current) return;
 
-  // Atualizar com novo valor
   await supabase
     .from('user_limits')
     .update({
@@ -109,7 +101,6 @@ async function updateTokenUsage(userId, tokensToAdd) {
 }
 
 async function incrementStoryCount(userId) {
-  // Buscar valor atual
   const { data: current } = await supabase
     .from('user_limits')
     .select('stories_used_this_month')
@@ -118,7 +109,6 @@ async function incrementStoryCount(userId) {
 
   if (!current) return;
 
-  // Atualizar com novo valor
   await supabase
     .from('user_limits')
     .update({
@@ -143,17 +133,13 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
       });
     }
 
-    // Apenas garantir que usuário existe (sem verificar limites)
     await ensureUserTracking(userId);
 
-    // Detectar idioma
     const language = detectLanguage(userInput);
 
-    // Chamar Claude
     const systemPrompt = getPrompt('suggest_paths');
     const { content, usage } = await callClaude(systemPrompt, userInput);
 
-    // Parse JSON response
     let paths;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -169,7 +155,6 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
     const totalTokens = usage.input_tokens + usage.output_tokens;
     const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
 
-    // Salvar no tracking (apenas para análise futura)
     await supabase.from('usage_tracking').insert([{
       user_id: userId,
       prompt_type: 'suggest_paths',
@@ -179,7 +164,6 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
       cost_usd: costUsd
     }]);
 
-    // Atualizar contador de tokens (apenas para análise, SEM bloquear)
     await updateTokenUsage(userId, totalTokens);
 
     res.json({
@@ -221,10 +205,8 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       });
     }
 
-    // Apenas garantir que usuário existe (sem verificar limites)
     await ensureUserTracking(userId);
 
-    // Construir mensagem para Claude
     let fullPrompt = `INPUT ORIGINAL:\n${userInput}\n\n`;
     
     if (customDescription) {
@@ -235,11 +217,9 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       fullPrompt += `INSTRUÇÃO: Crie uma história seguindo o input original.`;
     }
 
-    // Chamar Claude
     const systemPrompt = getPrompt('generate_story');
     const { content, usage } = await callClaude(systemPrompt, fullPrompt);
 
-    // Parse JSON response
     let storyData;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -255,7 +235,6 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
     const totalTokens = usage.input_tokens + usage.output_tokens;
     const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
 
-    // Salvar conversa completa
     const { data: conversationData, error: convError } = await supabase
       .from('conversations')
       .insert([{
@@ -273,7 +252,6 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
 
     if (convError) throw convError;
 
-    // Tracking
     await supabase.from('usage_tracking').insert([{
       user_id: userId,
       prompt_type: 'generate_story',
@@ -284,7 +262,6 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       conversation_id: conversationData.id
     }]);
 
-    // Atualizar contadores (apenas para análise, SEM bloquear)
     await incrementStoryCount(userId);
     await updateTokenUsage(userId, totalTokens);
 
@@ -331,10 +308,8 @@ router.post('/refine-line', requireAuthentication, async (req, res) => {
       });
     }
 
-    // Apenas garantir que usuário existe (sem verificar limites)
     await ensureUserTracking(userId);
 
-    // Construir prompt
     const fullPrompt = `
 HISTÓRIA ATUAL:
 Linha 1: ${currentStory.line1}
@@ -347,11 +322,9 @@ LINHA A MODIFICAR: ${lineNumber}
 SUGESTÃO DO USUÁRIO: ${userSuggestion}
 `;
 
-    // Chamar Claude
     const systemPrompt = getPrompt('refine_line');
     const { content, usage } = await callClaude(systemPrompt, fullPrompt);
 
-    // Parse JSON response
     let refinedData;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -367,7 +340,6 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
     const totalTokens = usage.input_tokens + usage.output_tokens;
     const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
 
-    // Atualizar conversa existente
     if (conversationId) {
       await supabase
         .from('conversations')
@@ -379,7 +351,6 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
         .eq('id', conversationId);
     }
 
-    // Tracking
     await supabase.from('usage_tracking').insert([{
       user_id: userId,
       prompt_type: 'refine_line',
@@ -390,7 +361,6 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
       conversation_id: conversationId
     }]);
 
-    // Atualizar contador de tokens (apenas para análise, SEM bloquear)
     await updateTokenUsage(userId, totalTokens);
 
     res.json({
@@ -414,7 +384,7 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
 });
 
 // ============================================
-// GET - Verificar uso atual (apenas visualização)
+// GET - Verificar uso atual
 // ============================================
 router.get('/usage', requireAuthentication, async (req, res) => {
   try {
@@ -471,7 +441,7 @@ router.get('/history', requireAuthentication, async (req, res) => {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(50); // Aumentar para 50 histórias
 
     if (error) throw error;
 
@@ -481,6 +451,50 @@ router.get('/history', requireAuthentication, async (req, res) => {
       conversations: data
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// DELETE - Deletar história específica
+// ============================================
+router.delete('/history/:id', requireAuthentication, async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const storyId = req.params.id;
+    
+    // Verificar se a história pertence ao usuário
+    const { data: story } = await supabase
+      .from('conversations')
+      .select('user_id')
+      .eq('id', storyId)
+      .single();
+    
+    if (!story || story.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized to delete this story'
+      });
+    }
+    
+    // Deletar história
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', storyId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    
+    res.json({
+      success: true,
+      message: 'Story deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting story:', error);
     res.status(500).json({
       success: false,
       error: error.message
