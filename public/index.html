@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>5 Lines Story</title>
+  <title>5 Lines Story - Transform Ideas into Compelling Stories</title>
   
   <style>
     * {
@@ -18,6 +18,7 @@
       min-height: 100vh;
     }
 
+    /* Header */
     .header {
       display: flex;
       justify-content: space-between;
@@ -25,6 +26,9 @@
       padding: 20px 40px;
       background: white;
       border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .logo {
@@ -41,10 +45,36 @@
       font-size: 28px;
     }
 
+    .header-center {
+      display: flex;
+      gap: 8px;
+    }
+
     .header-actions {
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+
+    .nav-link {
+      padding: 8px 16px;
+      background: #f9fafb;
+      color: #6b7280;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link:hover {
+      background: #f3f4f6;
+      color: #374151;
     }
 
     .login-btn, .history-btn {
@@ -79,6 +109,7 @@
       background: #e5e7eb;
     }
 
+    /* Main Content */
     .main-content {
       max-width: 1200px;
       margin: 0 auto;
@@ -172,6 +203,7 @@
       margin-top: 8px;
     }
 
+    /* Footer */
     .footer {
       text-align: center;
       padding: 40px;
@@ -192,6 +224,34 @@
     .hidden {
       display: none;
     }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px 20px;
+      }
+
+      .header-center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .nav-link {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .main-title {
+        font-size: 32px;
+      }
+
+      .main-subtitle {
+        font-size: 18px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -200,6 +260,20 @@
       <span class="logo-icon">✨</span>
       <span>5 Lines Story</span>
     </a>
+    
+    <!-- Navigation Links -->
+    <div class="header-center hidden" id="navLinks">
+      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
+        💡 Feedback
+      </a>
+      <a href="https://laltopialinestories.userjot.com/roadmap" target="_blank" class="nav-link">
+        🗺️ Roadmap
+      </a>
+      <a href="https://laltopialinestories.userjot.com/updates" target="_blank" class="nav-link">
+        📢 Updates
+      </a>
+    </div>
+
     <div class="header-actions">
       <button class="login-btn hidden" id="sign-in-btn">Sign In</button>
       <a href="/history.html" class="history-btn hidden" id="history-link">
@@ -239,10 +313,23 @@
   <footer class="footer">
     <p>
       <a href="/api/health">Health Check</a>
-      <a href="/users.html">Manage Users</a>
+      <a href="https://laltopialinestories.userjot.com/" target="_blank">Give Feedback</a>
     </p>
     <p style="margin-top: 12px;">Version 10.0 - Powered by Claude & Supabase</p>
   </footer>
+
+  <!-- UserJot Widget -->
+  <script>
+    window.UserJotSettings = {
+      projectId: 'cmhkpz9cd01xu15obzsfghhok',  // ⚠️ SUBSTITUIR pelo seu Project ID
+      position: 'right',
+      theme: 'light',
+      color: '#6366f1',
+      showCount: true,
+      hideOnMobile: false
+    };
+  </script>
+  <script src="https://widget.userjot.com/widget.js" async></script>
 
   <!-- Clerk Frontend API -->
   <script
@@ -260,16 +347,19 @@
       
       const signInBtn = document.getElementById('sign-in-btn');
       const historyLink = document.getElementById('history-link');
+      const navLinks = document.getElementById('navLinks');
       const userButtonDiv = document.getElementById('user-button');
       
       if (window.Clerk.user) {
-        // User is signed in - show user button and history link
+        // User is signed in - show everything
         window.Clerk.mountUserButton(userButtonDiv);
         historyLink.classList.remove('hidden');
+        navLinks.classList.remove('hidden');
       } else {
-        // User is NOT signed in - show sign in button
+        // User is NOT signed in - show sign in button and nav links
         signInBtn.classList.remove('hidden');
         signInBtn.onclick = () => window.Clerk.openSignIn();
+        navLinks.classList.remove('hidden');
       }
     });
   </script>
