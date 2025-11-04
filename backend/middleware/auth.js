@@ -1,6 +1,10 @@
 const { clerkClient, requireAuth } = require('@clerk/express');
 
-// Middleware para verificar se está autenticado
+// ============================================
+// 🔥 MIDDLEWARE SIMPLIFICADO - SEM VERIFICAÇÃO DE PLANOS
+// ============================================
+
+// Middleware para verificar se está autenticado (APENAS isso)
 const requireAuthentication = requireAuth({
   onError: (error) => {
     return {
@@ -10,33 +14,13 @@ const requireAuthentication = requireAuth({
   }
 });
 
-// Middleware para verificar plano premium
-const requirePremium = async (req, res, next) => {
-  try {
-    const userId = req.auth.userId;
-    const user = await clerkClient.users.getUser(userId);
-    
-    // Verificar se tem metadata de premium
-    const isPremium = user.publicMetadata?.premium === true;
-    
-    if (!isPremium) {
-      return res.status(403).json({
-        success: false,
-        error: 'Premium subscription required',
-        message: 'This feature requires a premium subscription'
-      });
-    }
-    
-    next();
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-};
+// ============================================
+// REMOVIDO: requirePremium
+// ============================================
+// Não há mais verificação de plano premium
+// Todos os usuários têm acesso a tudo
 
 module.exports = {
-  requireAuthentication,
-  requirePremium
+  requireAuthentication
+  // requirePremium - REMOVIDO
 };
