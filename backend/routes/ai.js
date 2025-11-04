@@ -25,21 +25,42 @@ const PRICING = {
   }
 };
 
-// CONFIGURAÇÃO DE LIMITES POR PLANO
+// ============================================
+// 🧪 CONFIGURAÇÃO DE LIMITES - MODO TESTE EXTREMO
+// ============================================
+// ⚠️ LIMITES SUPER ALTOS PARA AVALIAR USO REAL SEM RESTRIÇÕES
 const PLAN_LIMITS = {
   'free': {
-    monthly_story_limit: 3,
-    tokens_limit_monthly: 5000
+    monthly_story_limit: 10000,     // 🧪 TESTE: 10.000 histórias (praticamente ilimitado)
+    tokens_limit_monthly: 5000000   // 🧪 TESTE: 5 MILHÕES de tokens
   },
   'plus': {
-    monthly_story_limit: 50,
-    tokens_limit_monthly: 75000
+    monthly_story_limit: 50000,     // 🧪 TESTE: 50.000 histórias
+    tokens_limit_monthly: 20000000  // 🧪 TESTE: 20 MILHÕES de tokens
   },
   'pro': {
-    monthly_story_limit: 150,
-    tokens_limit_monthly: 220000
+    monthly_story_limit: 100000,    // 🧪 TESTE: 100.000 histórias
+    tokens_limit_monthly: 50000000  // 🧪 TESTE: 50 MILHÕES de tokens
   }
 };
+
+// ⚠️ APÓS PERÍODO DE TESTES, ANALISAR DADOS E VOLTAR PARA LIMITES COMERCIAIS:
+// 
+// SUGESTÃO DE LIMITES PARA PRODUÇÃO (baseado em análise de uso):
+// const PLAN_LIMITS_PRODUCTION = {
+//   'free': { 
+//     monthly_story_limit: 3,      // 3 histórias/mês
+//     tokens_limit_monthly: 5000   // ~5k tokens (~10 interações)
+//   },
+//   'plus': { 
+//     monthly_story_limit: 50,     // 50 histórias/mês  
+//     tokens_limit_monthly: 75000  // ~75k tokens (~150 interações)
+//   },
+//   'pro': { 
+//     monthly_story_limit: 150,    // 150 histórias/mês
+//     tokens_limit_monthly: 220000 // ~220k tokens (~440 interações)
+//   }
+// };
 
 // ============================================
 // HELPERS
@@ -584,6 +605,40 @@ router.get('/history', requireAuthentication, async (req, res) => {
       success: true,
       count: data.length,
       conversations: data
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// 🧪 ADMIN: Resetar limites de um usuário (para testes)
+// ============================================
+router.post('/admin/reset-limits/:userId', async (req, res) => {
+  try {
+    // ⚠️ REMOVER ISSO EM PRODUÇÃO ou adicionar autenticação de admin
+    const { userId } = req.params;
+    
+    const { data, error } = await supabase
+      .from('user_limits')
+      .update({
+        stories_used_this_month: 0,
+        tokens_used_this_month: 0,
+        updated_at: new Date()
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'User limits reset successfully',
+      limits: data
     });
   } catch (error) {
     res.status(500).json({
