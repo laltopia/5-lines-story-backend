@@ -3,7 +3,6 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const supabase = require('../config/supabase');
 const { requireAuthentication } = require('../middleware/auth');
-const { clerkClient } = require('@clerk/express');
 const { 
   getPrompt, 
   detectLanguage, 
@@ -26,67 +25,19 @@ const PRICING = {
 };
 
 // ============================================
-// 🧪 CONFIGURAÇÃO DE LIMITES - MODO TESTE EXTREMO
+// 🔥 SEM LIMITES - MODO TESTE TOTAL
 // ============================================
-// ⚠️ LIMITES SUPER ALTOS PARA AVALIAR USO REAL SEM RESTRIÇÕES
-const PLAN_LIMITS = {
-  'free': {
-    monthly_story_limit: 10000,     // 🧪 TESTE: 10.000 histórias (praticamente ilimitado)
-    tokens_limit_monthly: 5000000   // 🧪 TESTE: 5 MILHÕES de tokens
-  },
-  'plus': {
-    monthly_story_limit: 50000,     // 🧪 TESTE: 50.000 histórias
-    tokens_limit_monthly: 20000000  // 🧪 TESTE: 20 MILHÕES de tokens
-  },
-  'pro': {
-    monthly_story_limit: 100000,    // 🧪 TESTE: 100.000 histórias
-    tokens_limit_monthly: 50000000  // 🧪 TESTE: 50 MILHÕES de tokens
-  }
-};
-
-// ⚠️ APÓS PERÍODO DE TESTES, ANALISAR DADOS E VOLTAR PARA LIMITES COMERCIAIS:
-// 
-// SUGESTÃO DE LIMITES PARA PRODUÇÃO (baseado em análise de uso):
-// const PLAN_LIMITS_PRODUCTION = {
-//   'free': { 
-//     monthly_story_limit: 3,      // 3 histórias/mês
-//     tokens_limit_monthly: 5000   // ~5k tokens (~10 interações)
-//   },
-//   'plus': { 
-//     monthly_story_limit: 50,     // 50 histórias/mês  
-//     tokens_limit_monthly: 75000  // ~75k tokens (~150 interações)
-//   },
-//   'pro': { 
-//     monthly_story_limit: 150,    // 150 histórias/mês
-//     tokens_limit_monthly: 220000 // ~220k tokens (~440 interações)
-//   }
-// };
+// Removida TODA lógica de verificação de planos e limites
+// Apenas tracking para análise futura
 
 // ============================================
-// HELPERS
+// HELPERS SIMPLIFICADOS
 // ============================================
 
-async function ensureUserLimit(userId) {
-  // 1. Buscar plano do usuário no Clerk
-  let userPlan = 'free'; // default
-  try {
-    const clerkUser = await clerkClient.users.getUser(userId);
-    userPlan = clerkUser.publicMetadata?.plan || 'free';
-    
-    // Validar que o plano existe
-    if (!PLAN_LIMITS[userPlan]) {
-      console.warn(`Invalid plan "${userPlan}" for user ${userId}, defaulting to free`);
-      userPlan = 'free';
-    }
-  } catch (error) {
-    console.error('Error fetching user from Clerk:', error);
-    // Continuar com plano free se houver erro
-  }
-
-  // 2. Obter limites do plano
-  const planLimits = PLAN_LIMITS[userPlan];
-
-  // 3. Verificar se usuário existe no banco
+async function ensureUserTracking(userId) {
+  // Apenas garante que usuário existe na tabela para tracking
+  // SEM nenhuma verificação de limite
+  
   const { data: existing } = await supabase
     .from('user_limits')
     .select('*')
@@ -94,14 +45,14 @@ async function ensureUserLimit(userId) {
     .single();
 
   if (!existing) {
-    // 3a. Criar novo usuário com limites do plano
-    const { data: newLimit, error } = await supabase
+    // Criar com valores super altos (praticamente ilimitado)
+    const { data: newUser, error } = await supabase
       .from('user_limits')
       .insert([{
         user_id: userId,
-        plan_type: userPlan,
-        monthly_story_limit: planLimits.monthly_story_limit,
-        tokens_limit_monthly: planLimits.tokens_limit_monthly,
+        plan_type: 'unlimited', // Todos são "unlimited" agora
+        monthly_story_limit: 999999,
+        tokens_limit_monthly: 999999999,
         stories_used_this_month: 0,
         tokens_used_this_month: 0
       }])
@@ -109,83 +60,10 @@ async function ensureUserLimit(userId) {
       .single();
 
     if (error) throw error;
-    return newLimit;
-  }
-
-  // 4. Verificar se plano mudou
-  if (existing.plan_type !== userPlan) {
-    console.log(`Plan changed for user ${userId}: ${existing.plan_type} → ${userPlan}`);
-    
-    // Atualizar limites baseado no novo plano
-    const { data: updated, error } = await supabase
-      .from('user_limits')
-      .update({
-        plan_type: userPlan,
-        monthly_story_limit: planLimits.monthly_story_limit,
-        tokens_limit_monthly: planLimits.tokens_limit_monthly,
-        updated_at: new Date()
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return updated;
-  }
-
-  // 5. Verificar reset mensal
-  const resetDate = new Date(existing.limit_reset_date);
-  const now = new Date();
-  
-  if (now >= resetDate) {
-    const { data: updated, error } = await supabase
-      .from('user_limits')
-      .update({
-        stories_used_this_month: 0,
-        tokens_used_this_month: 0,
-        limit_reset_date: new Date(now.getFullYear(), now.getMonth() + 1, 1),
-        updated_at: new Date()
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return updated;
+    return newUser;
   }
 
   return existing;
-}
-
-async function checkUserCanGenerate(userId) {
-  const userLimit = await ensureUserLimit(userId);
-
-  if (userLimit.stories_used_this_month >= userLimit.monthly_story_limit) {
-    return {
-      allowed: false,
-      reason: 'story_limit_reached',
-      message: `Você atingiu seu limite de ${userLimit.monthly_story_limit} histórias este mês.`,
-      current: userLimit.stories_used_this_month,
-      limit: userLimit.monthly_story_limit,
-      resetDate: userLimit.limit_reset_date
-    };
-  }
-
-  if (userLimit.tokens_used_this_month >= userLimit.tokens_limit_monthly) {
-    return {
-      allowed: false,
-      reason: 'token_limit_reached',
-      message: `Você atingiu seu limite de tokens este mês.`,
-      tokensUsed: userLimit.tokens_used_this_month,
-      tokensLimit: userLimit.tokens_limit_monthly,
-      resetDate: userLimit.limit_reset_date
-    };
-  }
-
-  return {
-    allowed: true,
-    userLimit
-  };
 }
 
 function calculateCost(inputTokens, outputTokens) {
@@ -225,15 +103,8 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
       });
     }
 
-    // Verificar limites (NÃO conta como história completa ainda)
-    const canGenerate = await checkUserCanGenerate(userId);
-    if (!canGenerate.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Limit reached',
-        ...canGenerate
-      });
-    }
+    // Apenas garantir que usuário existe (sem verificar limites)
+    await ensureUserTracking(userId);
 
     // Detectar idioma
     const language = detectLanguage(userInput);
@@ -258,7 +129,7 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
     const totalTokens = usage.input_tokens + usage.output_tokens;
     const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
 
-    // Salvar no tracking (mas NÃO incrementar contador de histórias ainda)
+    // Salvar no tracking (apenas para análise futura)
     await supabase.from('usage_tracking').insert([{
       user_id: userId,
       prompt_type: 'suggest_paths',
@@ -268,11 +139,11 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
       cost_usd: costUsd
     }]);
 
-    // Atualizar apenas tokens (não histórias)
+    // Atualizar contador (apenas para análise, SEM bloquear)
     await supabase
       .from('user_limits')
       .update({
-        tokens_used_this_month: canGenerate.userLimit.tokens_used_this_month + totalTokens,
+        tokens_used_this_month: supabase.raw(`tokens_used_this_month + ${totalTokens}`),
         updated_at: new Date()
       })
       .eq('user_id', userId);
@@ -302,9 +173,9 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
 router.post('/generate-story', requireAuthentication, async (req, res) => {
   try {
     const { 
-      userInput,           // Input original
-      selectedPath,        // Caminho escolhido (ou null)
-      customDescription    // Descrição customizada (ou null)
+      userInput,
+      selectedPath,
+      customDescription
     } = req.body;
     
     const userId = req.auth.userId;
@@ -316,15 +187,8 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       });
     }
 
-    // Verificar limites
-    const canGenerate = await checkUserCanGenerate(userId);
-    if (!canGenerate.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Limit reached',
-        ...canGenerate
-      });
-    }
+    // Apenas garantir que usuário existe (sem verificar limites)
+    await ensureUserTracking(userId);
 
     // Construir mensagem para Claude
     let fullPrompt = `INPUT ORIGINAL:\n${userInput}\n\n`;
@@ -363,7 +227,7 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       .insert([{
         user_input: userInput,
         ai_response: JSON.stringify(storyData.story),
-        prompt_used: systemPrompt.substring(0, 500), // Truncar para não exceder limite
+        prompt_used: systemPrompt.substring(0, 500),
         prompt_type: 'generate_story',
         user_id: userId,
         tokens_used: totalTokens,
@@ -386,18 +250,15 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       conversation_id: conversationData.id
     }]);
 
-    // Atualizar contadores (AGORA SIM incrementa histórias)
+    // Atualizar contadores (apenas para análise, SEM bloquear)
     await supabase
       .from('user_limits')
       .update({
-        stories_used_this_month: canGenerate.userLimit.stories_used_this_month + 1,
-        tokens_used_this_month: canGenerate.userLimit.tokens_used_this_month + totalTokens,
+        stories_used_this_month: supabase.raw('stories_used_this_month + 1'),
+        tokens_used_this_month: supabase.raw(`tokens_used_this_month + ${totalTokens}`),
         updated_at: new Date()
       })
       .eq('user_id', userId);
-
-    // Buscar limites atualizados
-    const updatedLimit = await ensureUserLimit(userId);
 
     res.json({
       success: true,
@@ -408,9 +269,7 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
         tokensUsed: totalTokens,
         inputTokens: usage.input_tokens,
         outputTokens: usage.output_tokens,
-        costUsd: costUsd.toFixed(6),
-        storiesRemaining: updatedLimit.monthly_story_limit - updatedLimit.stories_used_this_month,
-        tokensRemaining: updatedLimit.tokens_limit_monthly - updatedLimit.tokens_used_this_month
+        costUsd: costUsd.toFixed(6)
       }
     });
 
@@ -429,10 +288,10 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
 router.post('/refine-line', requireAuthentication, async (req, res) => {
   try {
     const { 
-      currentStory,      // Objeto com line1, line2, ..., line5
-      lineNumber,        // 1-5
-      userSuggestion,    // O que o usuário quer mudar
-      conversationId     // ID da conversa original
+      currentStory,
+      lineNumber,
+      userSuggestion,
+      conversationId
     } = req.body;
     
     const userId = req.auth.userId;
@@ -444,15 +303,8 @@ router.post('/refine-line', requireAuthentication, async (req, res) => {
       });
     }
 
-    // Verificar limites (refinamentos são mais baratos, mas ainda contam)
-    const canGenerate = await checkUserCanGenerate(userId);
-    if (!canGenerate.allowed) {
-      return res.status(403).json({
-        success: false,
-        error: 'Limit reached',
-        ...canGenerate
-      });
-    }
+    // Apenas garantir que usuário existe (sem verificar limites)
+    await ensureUserTracking(userId);
 
     // Construir prompt
     const fullPrompt = `
@@ -487,13 +339,13 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
     const totalTokens = usage.input_tokens + usage.output_tokens;
     const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
 
-    // Atualizar conversa existente (adicionar refinamento ao histórico)
+    // Atualizar conversa existente
     if (conversationId) {
       await supabase
         .from('conversations')
         .update({
           ai_response: JSON.stringify(refinedData.story),
-          tokens_used: totalTokens, // Sobrescrever com novo total
+          tokens_used: totalTokens,
           updated_at: new Date()
         })
         .eq('id', conversationId);
@@ -510,11 +362,11 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
       conversation_id: conversationId
     }]);
 
-    // Atualizar apenas tokens (refinamento não conta como história nova)
+    // Atualizar contador (apenas para análise, SEM bloquear)
     await supabase
       .from('user_limits')
       .update({
-        tokens_used_this_month: canGenerate.userLimit.tokens_used_this_month + totalTokens,
+        tokens_used_this_month: supabase.raw(`tokens_used_this_month + ${totalTokens}`),
         updated_at: new Date()
       })
       .eq('user_id', userId);
@@ -540,12 +392,12 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
 });
 
 // ============================================
-// GET - Verificar uso atual do usuário
+// GET - Verificar uso atual (apenas visualização)
 // ============================================
 router.get('/usage', requireAuthentication, async (req, res) => {
   try {
     const userId = req.auth.userId;
-    const userLimit = await ensureUserLimit(userId);
+    const userLimit = await ensureUserTracking(userId);
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -560,18 +412,18 @@ router.get('/usage', requireAuthentication, async (req, res) => {
     res.json({
       success: true,
       usage: {
-        planType: userLimit.plan_type,
+        planType: 'unlimited',
         stories: {
           used: userLimit.stories_used_this_month,
-          limit: userLimit.monthly_story_limit,
-          remaining: userLimit.monthly_story_limit - userLimit.stories_used_this_month,
-          percentage: Math.round((userLimit.stories_used_this_month / userLimit.monthly_story_limit) * 100)
+          limit: 999999,
+          remaining: 999999,
+          percentage: 0
         },
         tokens: {
           used: userLimit.tokens_used_this_month,
-          limit: userLimit.tokens_limit_monthly,
-          remaining: userLimit.tokens_limit_monthly - userLimit.tokens_used_this_month,
-          percentage: Math.round((userLimit.tokens_used_this_month / userLimit.tokens_limit_monthly) * 100)
+          limit: 999999999,
+          remaining: 999999999,
+          percentage: 0
         },
         resetDate: userLimit.limit_reset_date,
         history: usageData
@@ -605,40 +457,6 @@ router.get('/history', requireAuthentication, async (req, res) => {
       success: true,
       count: data.length,
       conversations: data
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// 🧪 ADMIN: Resetar limites de um usuário (para testes)
-// ============================================
-router.post('/admin/reset-limits/:userId', async (req, res) => {
-  try {
-    // ⚠️ REMOVER ISSO EM PRODUÇÃO ou adicionar autenticação de admin
-    const { userId } = req.params;
-    
-    const { data, error } = await supabase
-      .from('user_limits')
-      .update({
-        stories_used_this_month: 0,
-        tokens_used_this_month: 0,
-        updated_at: new Date()
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({
-      success: true,
-      message: 'User limits reset successfully',
-      limits: data
     });
   } catch (error) {
     res.status(500).json({
