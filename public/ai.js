@@ -242,12 +242,12 @@ function renderStory(story) {
   linesContainer.innerHTML = Object.keys(story).map((key, index) => {
     const lineNumber = index + 1;
     return `
-      <div class="story-line" id="line-${lineNumber}">
+      <div class="story-line" id="line-container-${lineNumber}">
         <div class="line-label">
           <div class="line-number">${lineNumber}</div>
           <span>${lineLabels[index]}</span>
         </div>
-        <div class="line-content editable" onclick="editLine(${lineNumber})">
+        <div class="line-content editable" id="line-content-${lineNumber}" onclick="editLine(${lineNumber})">
           ${story[key]}
         </div>
       </div>
@@ -259,43 +259,58 @@ function renderStory(story) {
 // EDITAR LINHA
 // ============================================
 function editLine(lineNumber) {
-  if (appState.editingLine) {
+  console.log('Editing line:', lineNumber);
+  
+  if (appState.editingLine && appState.editingLine !== lineNumber) {
     // Já está editando outra linha, cancela
     cancelEdit();
   }
   
   appState.editingLine = lineNumber;
   
-  const lineElement = document.querySelector(`#line-${lineNumber} .line-content`);
+  const lineElement = document.getElementById(`line-content-${lineNumber}`);
   const currentText = lineElement.textContent.trim();
+  
+  console.log('Current text:', currentText);
   
   lineElement.classList.add('editing');
   lineElement.classList.remove('editable');
+  lineElement.onclick = null; // Remove click handler
+  
   lineElement.innerHTML = `
-    <textarea id="edit-textarea">${currentText}</textarea>
-    <div class="edit-actions">
-      <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEdit()">💫 Refine with AI</button>
+    <textarea id="edit-textarea-${lineNumber}" style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #6366f1; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical;">${currentText}</textarea>
+    <div style="display: flex; gap: 8px; margin-top: 12px; padding: 12px; background: white;">
+      <button class="btn btn-secondary" onclick="cancelEdit()" style="padding: 10px 20px;">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()" style="padding: 10px 20px;">💫 Refine with AI</button>
     </div>
   `;
   
-  document.getElementById('edit-textarea').focus();
+  // Focus no textarea
+  const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
+  if (textarea) {
+    textarea.focus();
+    // Coloca cursor no final
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  }
 }
 
 // ============================================
 // CANCELAR EDIÇÃO
 // ============================================
 function cancelEdit() {
+  console.log('Canceling edit for line:', appState.editingLine);
+  
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
   const lineKey = `line${lineNumber}`;
   const originalText = appState.currentStory[lineKey];
   
-  const lineElement = document.querySelector(`#line-${lineNumber} .line-content`);
+  const lineElement = document.getElementById(`line-content-${lineNumber}`);
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = originalText;
+  lineElement.onclick = () => editLine(lineNumber); // Restaura click handler
   
   appState.editingLine = null;
 }
@@ -304,22 +319,40 @@ function cancelEdit() {
 // SALVAR EDIÇÃO (REFINAR COM IA)
 // ============================================
 async function saveEdit() {
+  console.log('Saving edit for line:', appState.editingLine);
+  
   if (!appState.editingLine) return;
   
   const lineNumber = appState.editingLine;
-  const newText = document.getElementById('edit-textarea').value.trim();
+  const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
+  
+  if (!textarea) {
+    console.error('Textarea not found');
+    return;
+  }
+  
+  const newText = textarea.value.trim();
   
   if (!newText) {
     alert('Please enter your suggestion');
     return;
   }
   
+  console.log('New text:', newText);
+  
   // Mostrar loading
-  const lineElement = document.querySelector(`#line-${lineNumber} .line-content`);
-  lineElement.innerHTML = '<div class="loading"><div class="spinner"></div><p>Refining...</p></div>';
+  const lineElement = document.getElementById(`line-content-${lineNumber}`);
+  lineElement.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner"></div><p>Refining...</p></div>';
   
   try {
     const token = await window.Clerk.session.getToken();
+    
+    console.log('Calling API with:', {
+      currentStory: appState.currentStory,
+      lineNumber: lineNumber,
+      userSuggestion: newText,
+      conversationId: appState.conversationId
+    });
     
     const response = await fetch('/api/ai/refine-line', {
       method: 'POST',
@@ -336,6 +369,8 @@ async function saveEdit() {
     });
     
     const data = await response.json();
+    
+    console.log('API response:', data);
     
     if (data.success) {
       // Atualizar estado com nova história
@@ -356,7 +391,7 @@ async function saveEdit() {
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('Error connecting to server');
+    alert('Error connecting to server: ' + error.message);
     cancelEdit();
   }
 }
