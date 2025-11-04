@@ -41,6 +41,38 @@
       text-decoration: none;
     }
 
+    .header-center {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-link {
+      padding: 8px 16px;
+      background: #f9fafb;
+      color: #6b7280;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
     /* Container */
     .container {
       max-width: 1200px;
@@ -356,6 +388,24 @@
     .hidden {
       display: none;
     }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .header {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .header-center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .stories-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 
   <!-- Clerk -->
@@ -375,7 +425,23 @@
       <span style="font-size: 28px;">✨</span>
       <span>5 Lines Story</span>
     </a>
-    <div id="user-button"></div>
+    
+    <!-- Navigation Links -->
+    <div class="header-center">
+      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
+        💡 Feedback
+      </a>
+      <a href="https://laltopialinestories.userjot.com/roadmap" target="_blank" class="nav-link">
+        🗺️ Roadmap
+      </a>
+      <a href="https://laltopialinestories.userjot.com/updates" target="_blank" class="nav-link">
+        📢 Updates
+      </a>
+    </div>
+
+    <div class="header-actions">
+      <div id="user-button"></div>
+    </div>
   </header>
 
   <!-- Loading Auth -->
@@ -440,6 +506,19 @@
       </div>
     </div>
   </div>
+
+  <!-- UserJot Widget -->
+  <script>
+    window.UserJotSettings = {
+      projectId: 'cmhkpz9cd01xu15obzsfghhok',  // ⚠️ SUBSTITUIR pelo seu Project ID
+      position: 'right',
+      theme: 'light',
+      color: '#6366f1',
+      showCount: true,
+      hideOnMobile: false
+    };
+  </script>
+  <script src="https://widget.userjot.com/widget.js" async></script>
 
   <script src="/history.js"></script>
   
