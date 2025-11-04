@@ -50,7 +50,7 @@ async function ensureUserTracking(userId) {
       .from('user_limits')
       .insert([{
         user_id: userId,
-        plan_type: 'unlimited', // Todos são "unlimited" agora
+        plan_type: 'unlimited',
         monthly_story_limit: 999999,
         tokens_limit_monthly: 999999999,
         stories_used_this_month: 0,
@@ -86,6 +86,46 @@ async function callClaude(systemPrompt, userMessage) {
     content: message.content[0].text,
     usage: message.usage
   };
+}
+
+async function updateTokenUsage(userId, tokensToAdd) {
+  // Buscar valor atual
+  const { data: current } = await supabase
+    .from('user_limits')
+    .select('tokens_used_this_month')
+    .eq('user_id', userId)
+    .single();
+
+  if (!current) return;
+
+  // Atualizar com novo valor
+  await supabase
+    .from('user_limits')
+    .update({
+      tokens_used_this_month: current.tokens_used_this_month + tokensToAdd,
+      updated_at: new Date()
+    })
+    .eq('user_id', userId);
+}
+
+async function incrementStoryCount(userId) {
+  // Buscar valor atual
+  const { data: current } = await supabase
+    .from('user_limits')
+    .select('stories_used_this_month')
+    .eq('user_id', userId)
+    .single();
+
+  if (!current) return;
+
+  // Atualizar com novo valor
+  await supabase
+    .from('user_limits')
+    .update({
+      stories_used_this_month: current.stories_used_this_month + 1,
+      updated_at: new Date()
+    })
+    .eq('user_id', userId);
 }
 
 // ============================================
@@ -139,14 +179,8 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
       cost_usd: costUsd
     }]);
 
-    // Atualizar contador (apenas para análise, SEM bloquear)
-    await supabase
-      .from('user_limits')
-      .update({
-        tokens_used_this_month: supabase.raw(`tokens_used_this_month + ${totalTokens}`),
-        updated_at: new Date()
-      })
-      .eq('user_id', userId);
+    // Atualizar contador de tokens (apenas para análise, SEM bloquear)
+    await updateTokenUsage(userId, totalTokens);
 
     res.json({
       success: true,
@@ -251,14 +285,8 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
     }]);
 
     // Atualizar contadores (apenas para análise, SEM bloquear)
-    await supabase
-      .from('user_limits')
-      .update({
-        stories_used_this_month: supabase.raw('stories_used_this_month + 1'),
-        tokens_used_this_month: supabase.raw(`tokens_used_this_month + ${totalTokens}`),
-        updated_at: new Date()
-      })
-      .eq('user_id', userId);
+    await incrementStoryCount(userId);
+    await updateTokenUsage(userId, totalTokens);
 
     res.json({
       success: true,
@@ -362,14 +390,8 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
       conversation_id: conversationId
     }]);
 
-    // Atualizar contador (apenas para análise, SEM bloquear)
-    await supabase
-      .from('user_limits')
-      .update({
-        tokens_used_this_month: supabase.raw(`tokens_used_this_month + ${totalTokens}`),
-        updated_at: new Date()
-      })
-      .eq('user_id', userId);
+    // Atualizar contador de tokens (apenas para análise, SEM bloquear)
+    await updateTokenUsage(userId, totalTokens);
 
     res.json({
       success: true,
