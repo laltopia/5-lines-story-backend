@@ -191,13 +191,13 @@ src/
 
 ### Render
 
-> **🚨 Quick Fix:** See `RENDER_FIX_NOW.md` for urgent deployment instructions!
+> **🚨 Important:** See `RENDER_FIX_NOW.md` for detailed deployment instructions!
 
-#### Simple 2-Step Configuration
+#### Configuration
 
-1. **Configure in Render Dashboard:**
+1. **Configure in Render Dashboard (Settings → Build & Deploy):**
    ```
-   Build Command: npm ci
+   Build Command: npm ci && npm run build
    Start Command: npm start
    Node Version: 18.17.0
    ```
@@ -213,7 +213,12 @@ src/
 
 3. **Deploy!** (Clear build cache first for best results)
 
-> **How it works:** The `npm start` script automatically checks for a production build. If missing, it builds the app first, then starts the server. This prevents "no production build found" errors.
+#### Why this configuration?
+
+- **Build Phase:** Installs dependencies AND builds Next.js (5-10 min)
+- **Start Phase:** Quick verification and server start (< 15 sec)
+
+This prevents timeout errors during deployment. The build completes during the Build phase, so the Start phase is fast and the port opens immediately.
 
 ### Environment Variables Required
 
