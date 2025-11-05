@@ -47,7 +47,11 @@ SUGESTÃO DO USUÁRIO: ${suggestion}
       messages: [{ role: 'user', content: userMessage }],
     })
 
-    const content = message.content[0].text
+    const textBlock = message.content[0]
+    if (textBlock.type !== 'text') {
+      throw new Error('Unexpected response type from Claude API')
+    }
+    const content = textBlock.text
     const usage = message.usage
 
     let refinedData: RefineLineResponse
