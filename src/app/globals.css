@@ -23,7 +23,7 @@
   }
 
   * {
-    @apply border-border;
+    @apply border-slate-200;
   }
 
   body {
