@@ -270,20 +270,20 @@
     <p class="main-subtitle">Choose how you'd like to share your content</p>
 
     <div class="cards-container">
-      <a href="/ai.html" class="card">
+      <a href="#" class="card" id="text-card" onclick="handleTextCardClick(event)">
         <div class="card-icon">📝</div>
         <h3 class="card-title">Text</h3>
         <p class="card-description">Paste or type content</p>
       </a>
 
-      <div class="card coming-soon">
+      <div class="card coming-soon" onclick="alert('Audio input coming soon!')">
         <div class="card-icon">🎤</div>
         <h3 class="card-title">Audio</h3>
         <p class="card-description">Record your voice</p>
         <span class="badge">Coming Soon</span>
       </div>
 
-      <div class="card coming-soon">
+      <div class="card coming-soon" onclick="alert('Document upload coming soon!')">
         <div class="card-icon">📄</div>
         <h3 class="card-title">Document</h3>
         <p class="card-description">Upload PDF, PPT, DOC</p>
@@ -330,6 +330,22 @@
   </script>
 
   <script>
+    // Handle Text card click with auth check
+    function handleTextCardClick(event) {
+      event.preventDefault();
+      
+      if (window.Clerk && window.Clerk.user) {
+        // User is logged in, go to ai.html
+        window.location.href = '/ai.html';
+      } else if (window.Clerk) {
+        // User is NOT logged in, open sign in
+        window.Clerk.openSignIn();
+      } else {
+        // Clerk not loaded yet, wait a moment
+        setTimeout(() => handleTextCardClick(event), 500);
+      }
+    }
+
     window.addEventListener("load", async function () {
       await window.Clerk.load();
       
