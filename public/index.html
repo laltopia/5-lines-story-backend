@@ -45,51 +45,42 @@
       font-size: 28px;
     }
 
+    .header-center {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-link {
+      padding: 10px 20px;
+      background: transparent;
+      color: #111827;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-link:hover {
+      color: #6366f1;
+      border-color: transparent;
+    }
+
+    .nav-link.active {
+      background: #6366f1;
+      color: white;
+      border-color: #6366f1;
+    }
+
     .header-actions {
       display: flex;
       align-items: center;
       gap: 12px;
-    }
-
-    .feedback-btn {
-      padding: 10px 20px;
-      background: #6366f1;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .feedback-btn:hover {
-      background: #4f46e5;
-      transform: translateY(-1px);
-    }
-
-    .history-btn {
-      padding: 10px 20px;
-      background: #f3f4f6;
-      color: #374151;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .history-btn:hover {
-      background: #e5e7eb;
     }
 
     .login-btn {
@@ -227,7 +218,15 @@
     /* Mobile Responsive */
     @media (max-width: 768px) {
       .header {
+        flex-wrap: wrap;
+        gap: 12px;
         padding: 16px 20px;
+      }
+
+      .header-center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
       }
 
       .main-title {
@@ -247,17 +246,21 @@
       <span>5 Lines Story</span>
     </a>
 
+    <!-- Navigation Links -->
+    <div class="header-center">
+      <a href="/pricing.html" class="nav-link">
+        Pricing
+      </a>
+      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
+        Feedback
+      </a>
+      <a href="/history.html" class="nav-link" id="my-stories-link">
+        My Stories
+      </a>
+    </div>
+
     <div class="header-actions">
-      <!-- Feedback Button (always visible) -->
-      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="feedback-btn">
-        💡 Feedback
-      </a>
-      
-      <!-- Login/History/User buttons -->
       <button class="login-btn hidden" id="sign-in-btn">Sign In</button>
-      <a href="/history.html" class="history-btn hidden" id="history-link">
-        📚 My Stories
-      </a>
       <div id="user-button"></div>
     </div>
   </header>
@@ -292,10 +295,10 @@
   <footer class="footer">
     <p>
       <a href="/api/health">Health Check</a>
-      <a href="https://laltopialinestories.userjot.com/" target="_blank">Give Feedback</a>
       <a href="/pricing.html">Pricing</a>
+      <a href="https://laltopialinestories.userjot.com/" target="_blank">Give Feedback</a>
     </p>
-    <p style="margin-top: 12px;">Version 10.0 - Powered by Claude & Supabase</p>
+    <p style="margin-top: 12px;">Version 11.0 - Powered by Claude & Clerk</p>
   </footer>
 
   <!-- Clerk Frontend API -->
@@ -311,7 +314,6 @@
   <!-- UserJot Widget Script -->
   <script>
     (function() {
-      // Configuração do UserJot
       window.UserJotSettings = {
         projectId: 'cmhkpz9cd01xu15obzsfghhok',
         position: 'right',
@@ -319,20 +321,11 @@
         color: '#6366f1'
       };
       
-      // Carregar script do widget
       var script = document.createElement('script');
       script.src = 'https://widget.userjot.com/widget.js';
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
-      
-      // Debug: verificar se carregou
-      script.onload = function() {
-        console.log('✅ UserJot widget loaded successfully');
-      };
-      script.onerror = function() {
-        console.error('❌ Failed to load UserJot widget');
-      };
     })();
   </script>
 
@@ -341,17 +334,18 @@
       await window.Clerk.load();
       
       const signInBtn = document.getElementById('sign-in-btn');
-      const historyLink = document.getElementById('history-link');
+      const myStoriesLink = document.getElementById('my-stories-link');
       const userButtonDiv = document.getElementById('user-button');
       
       if (window.Clerk.user) {
         // User is signed in
         window.Clerk.mountUserButton(userButtonDiv);
-        historyLink.classList.remove('hidden');
       } else {
         // User is NOT signed in
         signInBtn.classList.remove('hidden');
         signInBtn.onclick = () => window.Clerk.openSignIn();
+        // Hide My Stories link if not logged in
+        myStoriesLink.style.display = 'none';
       }
     });
   </script>
