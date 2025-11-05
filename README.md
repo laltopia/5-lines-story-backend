@@ -1,83 +1,245 @@
-# 🚀 Meu Backend
+# 5 Lines Story - Next.js Edition
 
-Backend desenvolvido para conectar com app mobile.
+**Version 12.0** - Complete rewrite in Next.js with enhanced security, performance, and modern architecture.
 
-## Endpoints Disponíveis
+Transform your ideas into compelling narratives with AI-powered storytelling using the proven 5-line methodology.
 
-### Principal
-- `GET /` - Status do servidor
-- `GET /health` - Health check
+## 🚀 What's New in v12
 
-### Usuários
-- `GET /api/users` - Listar todos os usuários
-- `POST /api/users` - Criar novo usuário
-- `GET /api/users/:id` - Buscar usuário por ID
+- ✅ **Next.js 14** with App Router and Server Components
+- ✅ **TypeScript** for type safety
+- ✅ **Tailwind CSS** for modern, clean UI
+- ✅ **Enhanced Security** with security headers and CSP
+- ✅ **Optimized Performance** with SSR, ISR, and lazy loading
+- ✅ **Clerk Auth** native Next.js integration
+- ✅ **Standardized UI/UX** across all pages
+- ✅ **Clean Design** with minimal icons
+- ✅ **UserJot Integration** for user feedback
 
-## Como testar
+## 📋 Features
 
-### Health Check
+### 🎯 5-Line Storytelling Methodology
+
+Structure any story in 5 compelling lines:
+1. **Context/Situation** - Where? Who? What's the scenario?
+2. **Desire/Objective** - What's the goal?
+3. **Obstacle/Conflict** - What's the challenge?
+4. **Action/Attempt** - What was done?
+5. **Result/Transformation** - What changed?
+
+### 🤖 AI-Powered
+
+- Powered by **Claude Sonnet 4** (Anthropic)
+- Generate 3 narrative path suggestions
+- Create complete 5-line stories
+- Refine individual lines with AI
+- Multi-language support (PT, EN, ES, FR, DE)
+
+### 🔒 Security Features
+
+- Security headers (CSP, HSTS, X-Frame-Options)
+- Environment variable protection
+- Server-side API routes only
+- Clerk authentication middleware
+- Supabase RLS policies
+
+### ⚡ Performance
+
+- Next.js optimizations (SSR, ISR)
+- Image optimization
+- Code splitting
+- Lazy loading
+- Efficient caching strategies
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 14
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Authentication**: Clerk
+- **Database**: Supabase (PostgreSQL)
+- **AI**: Anthropic Claude API
+- **Feedback**: UserJot
+- **Deployment**: Vercel (recommended)
+
+## 📦 Installation
+
+1. **Clone the repository**
 ```bash
-https://seu-app.onrender.com/health
+git clone <your-repo>
+cd 5-lines-story-backend
 ```
 
-### Criar Usuário
+2. **Install dependencies**
 ```bash
-POST https://seu-app.onrender.com/api/users
-Content-Type: application/json
-
-{
-  "email": "teste@example.com",
-  "name": "Usuario Teste"
-}
+npm install
 ```
 
-## Tecnologias
-- Node.js + Express
-- Supabase (PostgreSQL)
-- Render (Deploy)
+3. **Set up environment variables**
+```bash
+cp .env.example .env
 ```
 
-4. Commit: `Update README`
+Edit `.env` with your credentials:
+```env
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
 
-✅ **Seu repositório está pronto!** Você deve ter 4 arquivos:
-- README.md
-- package.json
-- server.js
-- .gitignore
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Anthropic Claude AI
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+4. **Run development server**
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+## 🗄️ Database Setup
+
+### Supabase Tables
+
+```sql
+-- user_limits table
+CREATE TABLE user_limits (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE,
+  plan_type TEXT DEFAULT 'unlimited',
+  monthly_story_limit INTEGER DEFAULT 999999,
+  tokens_limit_monthly INTEGER DEFAULT 999999999,
+  stories_used_this_month INTEGER DEFAULT 0,
+  tokens_used_this_month INTEGER DEFAULT 0,
+  limit_reset_date TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- conversations table
+CREATE TABLE conversations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  user_input TEXT NOT NULL,
+  ai_response JSONB NOT NULL,
+  prompt_used TEXT,
+  prompt_type TEXT NOT NULL,
+  tokens_used INTEGER DEFAULT 0,
+  input_tokens INTEGER DEFAULT 0,
+  output_tokens INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- usage_tracking table
+CREATE TABLE usage_tracking (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  prompt_type TEXT NOT NULL,
+  tokens_used INTEGER DEFAULT 0,
+  input_tokens INTEGER DEFAULT 0,
+  output_tokens INTEGER DEFAULT 0,
+  cost_usd FLOAT DEFAULT 0,
+  conversation_id UUID,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_usage_tracking_user_id ON usage_tracking(user_id);
+```
+
+## 📁 Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API Routes
+│   │   └── ai/           # AI endpoints
+│   ├── story/            # Story creation page
+│   ├── history/          # Story history page
+│   ├── pricing/          # Pricing page
+│   ├── layout.tsx        # Root layout
+│   ├── page.tsx          # Home page
+│   └── globals.css       # Global styles
+├── components/            # React components
+│   ├── ui/               # Reusable UI components
+│   ├── Navbar.tsx        # Navigation
+│   ├── Footer.tsx        # Footer
+│   └── UserJotWidget.tsx # Feedback widget
+├── lib/                   # Utilities and configs
+│   ├── supabase/         # Supabase clients
+│   ├── anthropic.ts      # Anthropic config
+│   ├── prompts.ts        # AI prompts
+│   └── utils.ts          # Helper functions
+└── types/                 # TypeScript types
+    └── index.ts          # Type definitions
+```
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import project to Vercel
+3. Add environment variables
+4. Deploy!
+
+### Environment Variables Required
+
+Set these in your deployment platform:
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ANTHROPIC_API_KEY`
+
+## 📚 API Endpoints
+
+### POST /api/ai/suggest-paths
+Generate 3 narrative path suggestions.
+
+### POST /api/ai/generate-story
+Generate complete 5-line story.
+
+### POST /api/ai/refine-line
+Refine a specific line of the story.
+
+### GET /api/ai/history
+Get user's story history (last 50).
+
+### GET /api/ai/usage
+Get user's usage statistics.
+
+## 🎨 Design Principles
+
+- **Clean & Minimal**: Removed unnecessary icons, focused on content
+- **Consistent**: Standardized UI/UX across all pages
+- **Responsive**: Mobile-first design
+- **Accessible**: WCAG compliant
+- **Fast**: Optimized for performance
+
+## 🔐 Security
+
+- Security headers configured in `next.config.js`
+- All API routes protected with Clerk middleware
+- Environment variables never exposed to client
+- Supabase RLS policies enforced
+- HTTPS enforced in production
+
+## 📝 License
+
+Proprietary - All rights reserved
+
+## 🤝 Contributing
+
+This is a private project. For issues or suggestions, use the UserJot feedback widget.
 
 ---
 
-## **PARTE 3: CONFIGURAR SUPABASE**
-
-### Passo 3.1: Criar Conta no Supabase
-
-1. Acesse: **https://supabase.com**
-2. Clique **Start your project**
-3. **Sign in with GitHub** (use sua conta GitHub)
-4. Autorize o Supabase
-
-### Passo 3.2: Criar Projeto
-
-1. Clique **New project**
-2. Preencha:
-   - **Organization**: (selecione ou crie uma)
-   - **Name**: `meu-backend-db`
-   - **Database Password**: crie uma senha forte
-     - Exemplo: `MinhaS3nh@Fort3!2024`
-     - ⚠️ **COPIE E GUARDE ESSA SENHA!**
-   - **Region**: South America (São Paulo)
-   - **Pricing Plan**: Free
-3. Clique **Create new project**
-4. ⏰ Aguarde 2 minutos (criando infraestrutura)
-
-### Passo 3.3: Copiar Credenciais
-
-Quando terminar de criar:
-
-1. No menu lateral → **Project Settings** (ícone de engrenagem)
-2. Clique em **API**
-3. **COPIE E GUARDE** em um bloco de notas:
-```
-Project URL: https://xxxxxxxxx.supabase.co
-anon/public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...
-service_role key: (clique em "Reveal" para ver) eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...
+**Built with ❤️ using Next.js, TypeScript, and Claude AI**
