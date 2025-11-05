@@ -191,13 +191,18 @@ src/
 
 ### Render
 
-#### Option 1: Using render.yaml (Automatic - Recommended)
+> **🚨 Quick Fix:** See `RENDER_FIX_NOW.md` for urgent deployment instructions!
 
-The `render.yaml` file is already configured! Just:
+#### Simple 2-Step Configuration
 
-1. **Connect your GitHub repository** to Render
-2. Render will automatically detect `render.yaml`
-3. **Add environment variables** in Render Dashboard:
+1. **Configure in Render Dashboard:**
+   ```
+   Build Command: npm ci
+   Start Command: npm start
+   Node Version: 18.17.0
+   ```
+
+2. **Add environment variables:**
    - `NODE_ENV` = `production`
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
    - `CLERK_SECRET_KEY`
@@ -205,21 +210,10 @@ The `render.yaml` file is already configured! Just:
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ANTHROPIC_API_KEY`
-4. **Deploy!**
 
-#### Option 2: Manual Configuration
+3. **Deploy!** (Clear build cache first for best results)
 
-If automatic detection doesn't work:
-
-1. **Connect your GitHub repository** to Render
-2. **Configure the service manually:**
-   - **Build Command:** `npm ci && npm run build`
-   - **Start Command:** `./start.sh`
-   - **Node Version:** 18.17.0 or higher
-3. **Add all environment variables** (same as above)
-4. **Deploy!**
-
-> **Important:** The `start.sh` script ensures the build exists before starting. This prevents "no production build found" errors.
+> **How it works:** The `npm start` script automatically checks for a production build. If missing, it builds the app first, then starts the server. This prevents "no production build found" errors.
 
 ### Environment Variables Required
 
