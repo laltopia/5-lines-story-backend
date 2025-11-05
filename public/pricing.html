@@ -41,17 +41,16 @@
       text-decoration: none;
     }
 
-    .header-actions {
+    .header-center {
       display: flex;
-      align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
 
-    .feedback-btn {
+    .nav-link {
       padding: 10px 20px;
-      background: #6366f1;
-      color: white;
-      border: none;
+      background: transparent;
+      color: #111827;
+      border: 2px solid transparent;
       border-radius: 8px;
       font-size: 15px;
       font-weight: 500;
@@ -63,8 +62,21 @@
       gap: 8px;
     }
 
-    .feedback-btn:hover {
-      background: #4f46e5;
+    .nav-link:hover {
+      color: #6366f1;
+      border-color: transparent;
+    }
+
+    .nav-link.active {
+      background: #6366f1;
+      color: white;
+      border-color: #6366f1;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     /* Main Content */
@@ -89,6 +101,26 @@
     .pricing-subtitle {
       font-size: 18px;
       color: #6b7280;
+    }
+
+    .current-plan-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .current-plan-banner h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .current-plan-banner p {
+      font-size: 14px;
+      opacity: 0.9;
     }
 
     /* Pricing Cards */
@@ -121,12 +153,31 @@
       box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
     }
 
+    .pricing-card.current {
+      background: #f0f9ff;
+      border-color: #10b981;
+    }
+
     .featured-badge {
       position: absolute;
       top: -16px;
       left: 50%;
       transform: translateX(-50%);
       background: #6366f1;
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .current-badge {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #10b981;
       color: white;
       padding: 6px 20px;
       border-radius: 20px;
@@ -226,6 +277,16 @@
       background: #f0f9ff;
     }
 
+    .cta-button.disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .cta-button.disabled:hover {
+      transform: none;
+    }
+
     /* FAQ Section */
     .faq-section {
       max-width: 800px;
@@ -289,6 +350,17 @@
 
     /* Mobile Responsive */
     @media (max-width: 768px) {
+      .header {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .header-center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+      }
+
       .pricing-title {
         font-size: 32px;
       }
@@ -311,10 +383,20 @@
       <span>5 Lines Story</span>
     </a>
 
-    <div class="header-actions">
-      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="feedback-btn">
-        💡 Feedback
+    <!-- Navigation Links -->
+    <div class="header-center">
+      <a href="/pricing.html" class="nav-link active">
+        Pricing
       </a>
+      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
+        Feedback
+      </a>
+      <a href="/history.html" class="nav-link" id="my-stories-link">
+        My Stories
+      </a>
+    </div>
+
+    <div class="header-actions">
       <div id="user-button"></div>
     </div>
   </header>
@@ -333,11 +415,17 @@
       <p class="pricing-subtitle">Choose the plan that's right for you. Upgrade or downgrade anytime.</p>
     </div>
 
+    <!-- Current Plan Banner (if logged in) -->
+    <div class="current-plan-banner hidden" id="currentPlanBanner">
+      <h3 id="currentPlanText">Current Plan: Free</h3>
+      <p id="currentPlanDescription">5 stories remaining this month</p>
+    </div>
+
     <!-- Pricing Cards -->
     <div class="pricing-grid">
       
       <!-- Free Plan -->
-      <div class="pricing-card">
+      <div class="pricing-card" id="free-card">
         <div class="plan-name">Free</div>
         <div class="plan-description">Perfect for trying out 5 Lines Story</div>
         
@@ -365,13 +453,13 @@
           </li>
         </ul>
 
-        <button class="cta-button secondary" onclick="handlePlanClick('free')">
+        <button class="cta-button secondary" id="free-btn" onclick="handlePlanClick('free')">
           Get Started Free
         </button>
       </div>
 
       <!-- Pro Plan (Featured) -->
-      <div class="pricing-card featured">
+      <div class="pricing-card featured" id="pro-card">
         <div class="featured-badge">MOST POPULAR</div>
         
         <div class="plan-name">Pro</div>
@@ -405,13 +493,13 @@
           </li>
         </ul>
 
-        <button class="cta-button" onclick="handlePlanClick('pro')">
+        <button class="cta-button" id="pro-btn" onclick="handlePlanClick('pro')">
           Upgrade to Pro
         </button>
       </div>
 
       <!-- Enterprise Plan -->
-      <div class="pricing-card">
+      <div class="pricing-card" id="enterprise-card">
         <div class="plan-name">Enterprise</div>
         <div class="plan-description">For teams and organizations</div>
         
@@ -455,7 +543,7 @@
 
       <div class="faq-item">
         <div class="faq-question">Can I change plans anytime?</div>
-        <div class="faq-answer">Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the difference.</div>
+        <div class="faq-answer">Yes! You can upgrade or downgrade your plan at any time through your account settings. Changes take effect immediately.</div>
       </div>
 
       <div class="faq-item">
@@ -472,6 +560,11 @@
         <div class="faq-question">Do you offer discounts for annual billing?</div>
         <div class="faq-answer">Yes! Save 20% when you pay annually. Contact us for annual billing options.</div>
       </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How do I manage my subscription?</div>
+        <div class="faq-answer">Click on your profile icon in the top right corner and select "Manage subscription" to view, upgrade, or cancel your plan through Clerk.</div>
+      </div>
     </div>
   </div>
 
@@ -485,45 +578,149 @@
     type="text/javascript"
   ></script>
 
+  <!-- UserJot Widget -->
   <script>
+    window.UserJotSettings = {
+      projectId: 'cmhkpz9cd01xu15obzsfghhok',
+      position: 'right',
+      theme: 'light',
+      color: '#6366f1'
+    };
+  </script>
+  <script src="https://widget.userjot.com/widget.js" async></script>
+
+  <script>
+    let currentUserPlan = 'free'; // Default
+
     // Handle plan selection
-    function handlePlanClick(plan) {
+    async function handlePlanClick(plan) {
       console.log('Selected plan:', plan);
       
+      if (!window.Clerk.user) {
+        // Not logged in - redirect to sign up
+        window.Clerk.openSignUp();
+        return;
+      }
+
       if (plan === 'free') {
-        // Redirect to sign up if not logged in
-        if (!window.Clerk.user) {
-          window.Clerk.openSignUp();
-        } else {
+        if (currentUserPlan === 'free') {
           alert('You are already on the Free plan!');
+        } else {
+          // Downgrade to free
+          if (confirm('Are you sure you want to downgrade to the Free plan? You will lose access to Pro features.')) {
+            alert('To downgrade, please go to your account settings and cancel your subscription.');
+          }
         }
       } else if (plan === 'pro') {
-        // Check if user is logged in
-        if (!window.Clerk.user) {
-          alert('Please sign in first to upgrade to Pro');
-          window.Clerk.openSignIn();
+        if (currentUserPlan === 'pro' || currentUserPlan === 'unlimited') {
+          alert('You already have Pro access!');
         } else {
-          // TODO: Integrar com Clerk Billing ou Stripe
-          alert('Pro plan upgrade coming soon! This will integrate with Clerk Billing.');
-          // Futuramente: window.location.href = '/checkout?plan=pro';
+          // Upgrade to Pro
+          // TODO: Integrate with Clerk Subscriptions or Stripe
+          alert('Pro plan upgrade coming soon! This will integrate with Clerk Subscriptions or Stripe.');
+          
+          // Future implementation:
+          // window.Clerk.openUserProfile({ section: 'billing' });
+          // OR
+          // window.location.href = '/checkout?plan=pro';
         }
       } else if (plan === 'enterprise') {
         // Open email client
-        window.location.href = 'mailto:sales@5linesstory.com?subject=Enterprise Plan Inquiry';
+        window.location.href = 'mailto:sales@5linesstory.com?subject=Enterprise Plan Inquiry&body=Hi, I am interested in the Enterprise plan for 5 Lines Story.';
       }
     }
 
-    // Load Clerk
+    // Load current user plan
+    async function loadUserPlan() {
+      if (!window.Clerk.user) {
+        return;
+      }
+
+      try {
+        const token = await window.Clerk.session.getToken();
+        
+        const response = await fetch('/api/ai/usage', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const planType = data.usage.planType;
+          currentUserPlan = planType;
+          
+          // Update UI based on current plan
+          updateUIForCurrentPlan(planType, data.usage);
+        }
+      } catch (error) {
+        console.error('Error loading user plan:', error);
+      }
+    }
+
+    // Update UI to show current plan
+    function updateUIForCurrentPlan(planType, usageData) {
+      const currentPlanBanner = document.getElementById('currentPlanBanner');
+      const currentPlanText = document.getElementById('currentPlanText');
+      const currentPlanDescription = document.getElementById('currentPlanDescription');
+      
+      // Show banner
+      currentPlanBanner.classList.remove('hidden');
+      
+      // Update text
+      if (planType === 'unlimited' || planType === 'pro') {
+        currentPlanText.textContent = 'Current Plan: Pro';
+        currentPlanDescription.textContent = 'Unlimited stories per month';
+        
+        // Mark Pro card as current
+        const proCard = document.getElementById('pro-card');
+        proCard.classList.add('current');
+        const featuredBadge = proCard.querySelector('.featured-badge');
+        featuredBadge.textContent = 'CURRENT PLAN';
+        featuredBadge.classList.remove('featured-badge');
+        featuredBadge.classList.add('current-badge');
+        
+        // Update button
+        const proBtn = document.getElementById('pro-btn');
+        proBtn.textContent = 'Current Plan';
+        proBtn.classList.add('disabled');
+        proBtn.disabled = true;
+        
+      } else {
+        currentPlanText.textContent = 'Current Plan: Free';
+        currentPlanDescription.textContent = `${usageData.stories.remaining} stories remaining this month`;
+        
+        // Mark Free card as current
+        const freeCard = document.getElementById('free-card');
+        freeCard.classList.add('current');
+        const currentBadge = document.createElement('div');
+        currentBadge.className = 'current-badge';
+        currentBadge.textContent = 'CURRENT PLAN';
+        freeCard.insertBefore(currentBadge, freeCard.firstChild);
+        
+        // Update button
+        const freeBtn = document.getElementById('free-btn');
+        freeBtn.textContent = 'Current Plan';
+        freeBtn.classList.add('disabled');
+        freeBtn.disabled = true;
+      }
+    }
+
+    // Load Clerk and initialize
     window.addEventListener("load", async function () {
       await window.Clerk.load();
       
       const authLoading = document.getElementById('auth-loading');
       const mainContent = document.getElementById('main-content');
       const userButtonDiv = document.getElementById('user-button');
+      const myStoriesLink = document.getElementById('my-stories-link');
       
-      // Mount user button
+      // Mount user button if logged in
       if (window.Clerk.user) {
         window.Clerk.mountUserButton(userButtonDiv);
+        await loadUserPlan();
+      } else {
+        // Hide My Stories link if not logged in
+        myStoriesLink.style.display = 'none';
       }
       
       // Show content
