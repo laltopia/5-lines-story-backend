@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing - 5 Lines Story</title>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: #f8f9fa;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      text-decoration: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feedback-btn {
+      padding: 10px 20px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feedback-btn:hover {
+      background: #4f46e5;
+    }
+
+    /* Main Content */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .pricing-title {
+      font-size: 42px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .pricing-subtitle {
+      font-size: 18px;
+      color: #6b7280;
+    }
+
+    /* Pricing Cards */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .pricing-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 40px 32px;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .pricing-card:hover {
+      border-color: #6366f1;
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+      transform: translateY(-5px);
+    }
+
+    .pricing-card.featured {
+      border-color: #6366f1;
+      border-width: 3px;
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+    }
+
+    .featured-badge {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #6366f1;
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .plan-name {
+      font-size: 24px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .plan-description {
+      font-size: 15px;
+      color: #6b7280;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .plan-price {
+      margin-bottom: 28px;
+    }
+
+    .price-amount {
+      font-size: 48px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1;
+    }
+
+    .price-period {
+      font-size: 16px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .feature-item {
+      padding: 12px 0;
+      font-size: 15px;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature-icon {
+      width: 20px;
+      height: 20px;
+      background: #6366f1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-icon::before {
+      content: '✓';
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .cta-button {
+      width: 100%;
+      padding: 16px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cta-button:hover {
+      background: #4f46e5;
+      transform: translateY(-2px);
+    }
+
+    .cta-button.secondary {
+      background: white;
+      color: #6366f1;
+      border: 2px solid #6366f1;
+    }
+
+    .cta-button.secondary:hover {
+      background: #f0f9ff;
+    }
+
+    /* FAQ Section */
+    .faq-section {
+      max-width: 800px;
+      margin: 80px auto 0;
+      padding: 0 20px;
+    }
+
+    .faq-title {
+      font-size: 32px;
+      font-weight: 600;
+      color: #111827;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .faq-item {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .faq-question {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    .faq-answer {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.7;
+    }
+
+    /* Loading State */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #6366f1;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .pricing-title {
+        font-size: 32px;
+      }
+
+      .pricing-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .price-amount {
+        font-size: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="logo">
+      <span style="font-size: 28px;">✨</span>
+      <span>5 Lines Story</span>
+    </a>
+
+    <div class="header-actions">
+      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="feedback-btn">
+        💡 Feedback
+      </a>
+      <div id="user-button"></div>
+    </div>
+  </header>
+
+  <!-- Loading -->
+  <div id="auth-loading" class="loading">
+    <div class="spinner"></div>
+    <p style="color: #6b7280;">Loading pricing...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container hidden" id="main-content">
+    <!-- Pricing Header -->
+    <div class="pricing-header">
+      <h1 class="pricing-title">Simple, Transparent Pricing</h1>
+      <p class="pricing-subtitle">Choose the plan that's right for you. Upgrade or downgrade anytime.</p>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="pricing-grid">
+      
+      <!-- Free Plan -->
+      <div class="pricing-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-description">Perfect for trying out 5 Lines Story</div>
+        
+        <div class="plan-price">
+          <span class="price-amount">$0</span>
+          <span class="price-period">/month</span>
+        </div>
+
+        <ul class="plan-features">
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>5 stories per month</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Basic AI suggestions</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Story history</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Email support</span>
+          </li>
+        </ul>
+
+        <button class="cta-button secondary" onclick="handlePlanClick('free')">
+          Get Started Free
+        </button>
+      </div>
+
+      <!-- Pro Plan (Featured) -->
+      <div class="pricing-card featured">
+        <div class="featured-badge">MOST POPULAR</div>
+        
+        <div class="plan-name">Pro</div>
+        <div class="plan-description">For creators who want unlimited storytelling</div>
+        
+        <div class="plan-price">
+          <span class="price-amount">$19</span>
+          <span class="price-period">/month</span>
+        </div>
+
+        <ul class="plan-features">
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span><strong>Unlimited stories</strong></span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Advanced AI refinement</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Priority support</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Export to PDF/DOCX</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Custom branding</span>
+          </li>
+        </ul>
+
+        <button class="cta-button" onclick="handlePlanClick('pro')">
+          Upgrade to Pro
+        </button>
+      </div>
+
+      <!-- Enterprise Plan -->
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-description">For teams and organizations</div>
+        
+        <div class="plan-price">
+          <span class="price-amount" style="font-size: 32px;">Custom</span>
+        </div>
+
+        <ul class="plan-features">
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Everything in Pro</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Team collaboration</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>SSO & advanced security</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Dedicated account manager</span>
+          </li>
+          <li class="feature-item">
+            <span class="feature-icon"></span>
+            <span>Custom integrations</span>
+          </li>
+        </ul>
+
+        <button class="cta-button secondary" onclick="handlePlanClick('enterprise')">
+          Contact Sales
+        </button>
+      </div>
+
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="faq-section">
+      <h2 class="faq-title">Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <div class="faq-question">Can I change plans anytime?</div>
+        <div class="faq-answer">Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the difference.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What happens when I reach my story limit?</div>
+        <div class="faq-answer">On the Free plan, you'll need to wait until next month or upgrade to Pro for unlimited stories. We'll send you a notification when you're close to your limit.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Is there a refund policy?</div>
+        <div class="faq-answer">Yes! We offer a 14-day money-back guarantee on all paid plans. No questions asked.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do you offer discounts for annual billing?</div>
+        <div class="faq-answer">Yes! Save 20% when you pay annually. Contact us for annual billing options.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clerk Frontend API -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_bm90ZWQtaG9ybmV0LTYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    onload="window.Clerk.load()"
+    src="https://noted-hornet-6.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+
+  <script>
+    // Handle plan selection
+    function handlePlanClick(plan) {
+      console.log('Selected plan:', plan);
+      
+      if (plan === 'free') {
+        // Redirect to sign up if not logged in
+        if (!window.Clerk.user) {
+          window.Clerk.openSignUp();
+        } else {
+          alert('You are already on the Free plan!');
+        }
+      } else if (plan === 'pro') {
+        // Check if user is logged in
+        if (!window.Clerk.user) {
+          alert('Please sign in first to upgrade to Pro');
+          window.Clerk.openSignIn();
+        } else {
+          // TODO: Integrar com Clerk Billing ou Stripe
+          alert('Pro plan upgrade coming soon! This will integrate with Clerk Billing.');
+          // Futuramente: window.location.href = '/checkout?plan=pro';
+        }
+      } else if (plan === 'enterprise') {
+        // Open email client
+        window.location.href = 'mailto:sales@5linesstory.com?subject=Enterprise Plan Inquiry';
+      }
+    }
+
+    // Load Clerk
+    window.addEventListener("load", async function () {
+      await window.Clerk.load();
+      
+      const authLoading = document.getElementById('auth-loading');
+      const mainContent = document.getElementById('main-content');
+      const userButtonDiv = document.getElementById('user-button');
+      
+      // Mount user button
+      if (window.Clerk.user) {
+        window.Clerk.mountUserButton(userButtonDiv);
+      }
+      
+      // Show content
+      authLoading.style.display = 'none';
+      mainContent.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
