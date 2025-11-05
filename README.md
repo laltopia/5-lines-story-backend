@@ -189,9 +189,31 @@ src/
 3. Add environment variables
 4. Deploy!
 
+### Render
+
+1. **Connect your GitHub repository** to Render
+2. **Configure the service:**
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+   - **Node Version:** 18.17.0 or higher
+
+3. **Add environment variables** in Render Dashboard:
+   - `NODE_ENV` = `production`
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+   - `CLERK_SECRET_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `ANTHROPIC_API_KEY`
+
+4. **Deploy!**
+
+> **Note:** The `render.yaml` file is included for automatic configuration.
+
 ### Environment Variables Required
 
 Set these in your deployment platform:
+- `NODE_ENV` (production)
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
