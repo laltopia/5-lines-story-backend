@@ -191,12 +191,12 @@ src/
 
 ### Render
 
-1. **Connect your GitHub repository** to Render
-2. **Configure the service:**
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `npm start`
-   - **Node Version:** 18.17.0 or higher
+#### Option 1: Using render.yaml (Automatic - Recommended)
 
+The `render.yaml` file is already configured! Just:
+
+1. **Connect your GitHub repository** to Render
+2. Render will automatically detect `render.yaml`
 3. **Add environment variables** in Render Dashboard:
    - `NODE_ENV` = `production`
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
@@ -205,10 +205,21 @@ src/
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ANTHROPIC_API_KEY`
-
 4. **Deploy!**
 
-> **Note:** The `render.yaml` file is included for automatic configuration.
+#### Option 2: Manual Configuration
+
+If automatic detection doesn't work:
+
+1. **Connect your GitHub repository** to Render
+2. **Configure the service manually:**
+   - **Build Command:** `npm ci && npm run build`
+   - **Start Command:** `./start.sh`
+   - **Node Version:** 18.17.0 or higher
+3. **Add all environment variables** (same as above)
+4. **Deploy!**
+
+> **Important:** The `start.sh` script ensures the build exists before starting. This prevents "no production build found" errors.
 
 ### Environment Variables Required
 
