@@ -46,38 +46,11 @@
       gap: 8px;
     }
 
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
     .nav-link {
-      padding: 8px 16px;
-      background: #f9fafb;
-      color: #6b7280;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .nav-link:hover {
-      background: #f3f4f6;
-      color: #374151;
-    }
-
-    .history-btn {
       padding: 10px 20px;
-      background: #f3f4f6;
-      color: #374151;
-      border: none;
+      background: transparent;
+      color: #111827;
+      border: 2px solid transparent;
       border-radius: 8px;
       font-size: 15px;
       font-weight: 500;
@@ -89,8 +62,21 @@
       gap: 8px;
     }
 
-    .history-btn:hover {
-      background: #e5e7eb;
+    .nav-link:hover {
+      color: #6366f1;
+      border-color: transparent;
+    }
+
+    .nav-link.active {
+      background: #6366f1;
+      color: white;
+      border-color: #6366f1;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     /* Container */
@@ -461,21 +447,18 @@
     
     <!-- Navigation Links -->
     <div class="header-center">
+      <a href="/pricing.html" class="nav-link">
+        Pricing
+      </a>
       <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
-        💡 Feedback
+        Feedback
       </a>
-      <a href="https://laltopialinestories.userjot.com/roadmap" target="_blank" class="nav-link">
-        🗺️ Roadmap
-      </a>
-      <a href="https://laltopialinestories.userjot.com/updates" target="_blank" class="nav-link">
-        📢 Updates
+      <a href="/history.html" class="nav-link active">
+        My Stories
       </a>
     </div>
 
     <div class="header-actions">
-      <a href="/history.html" class="history-btn">
-        📚 My Stories
-      </a>
       <div id="user-button"></div>
     </div>
   </header>
@@ -605,7 +588,7 @@
   <!-- UserJot Widget -->
   <script>
     window.UserJotSettings = {
-      projectId: 'cmhkpz9cd01xu15obzsfghhok',  // ⚠️ SUBSTITUIR pelo seu Project ID
+      projectId: 'cmhkpz9cd01xu15obzsfghhok',
       position: 'right',
       theme: 'light',
       color: '#6366f1',
