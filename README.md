@@ -197,7 +197,7 @@ src/
 
 1. **Configure in Render Dashboard (Settings → Build & Deploy):**
    ```
-   Build Command: npm ci && npm run build
+   Build Command: npm install && npm run build
    Start Command: npm start
    Node Version: 18.17.0
    ```

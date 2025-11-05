@@ -11,7 +11,7 @@ O build está acontecendo na fase de START, causando timeout na detecção de po
 Configure **EXATAMENTE** assim:
 
 ```
-Build Command: npm ci && npm run build
+Build Command: npm install && npm run build
 Start Command: npm start
 Node Version: 18.17.0
 ```
@@ -27,7 +27,7 @@ Isso evita timeout na detecção de portas!
 
 1. **Dashboard do Render** → Seu serviço
 2. **Settings** → **Build & Deploy**
-3. **Build Command:** `npm ci && npm run build`
+3. **Build Command:** `npm install && npm run build`
 4. **Start Command:** `npm start`
 5. **Save Changes**
 6. **Manual Deploy** → **"Clear build cache & deploy"**
@@ -37,7 +37,7 @@ Isso evita timeout na detecção de portas!
 ### Durante Build (pode demorar):
 ```
 ==> Building...
-Running 'npm ci && npm run build'
+Running 'npm install && npm run build'
 ✓ Installing dependencies...
 ✓ Creating optimized production build...
 ✓ Build completed successfully
@@ -70,7 +70,7 @@ O Render aguarda a porta abrir apenas na fase de START, então o build PRECISA a
 
 ## 📊 Checklist de Sucesso
 
-- [ ] Build Command: `npm ci && npm run build`
+- [ ] Build Command: `npm install && npm run build`
 - [ ] Start Command: `npm start`
 - [ ] Node Version: 18+
 - [ ] 7 variáveis de ambiente configuradas
