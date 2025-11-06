@@ -603,20 +603,41 @@
   <script>
     // Check authentication
     window.addEventListener("load", async function () {
+      console.log('ai.html page load event fired');
+
       await window.Clerk.load();
-      
+
       const authLoading = document.getElementById('auth-loading');
       const mainContent = document.getElementById('main-content');
       const userButtonDiv = document.getElementById('user-button');
-      
+
       if (window.Clerk.user) {
+        console.log('User authenticated on ai.html');
         window.Clerk.mountUserButton(userButtonDiv);
         authLoading.style.display = 'none';
         mainContent.classList.remove('hidden');
-        
+
         // Load usage
         loadUsage();
+
+        // CRITICAL: Add button click handler (CSP might block inline onclick)
+        console.log('Setting up button click handlers...');
+        const submitButton = document.querySelector('button.btn.btn-primary.btn-full');
+        if (submitButton) {
+          console.log('Submit button found, attaching click handler');
+          // Remove any existing onclick to avoid double-firing
+          submitButton.onclick = null;
+          submitButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Button clicked via addEventListener!');
+            submitInput();
+          });
+          console.log('Click handler attached successfully');
+        } else {
+          console.error('Submit button not found!');
+        }
       } else {
+        console.log('User not authenticated, redirecting to home');
         window.location.href = '/';
       }
     });

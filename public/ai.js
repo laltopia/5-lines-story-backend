@@ -1,4 +1,10 @@
 // ============================================
+// SCRIPT LOADED CHECK
+// ============================================
+console.log('ai.js loaded successfully');
+console.log('submitInput function will be defined below');
+
+// ============================================
 // SECURITY: HTML ESCAPING TO PREVENT XSS
 // ============================================
 function escapeHtml(unsafe) {
@@ -147,6 +153,7 @@ async function submitInput() {
     goToStep(1);
   }
 }
+console.log('submitInput function defined:', typeof submitInput);
 
 // ============================================
 // RENDERIZAR CAMINHOS (XSS PROTECTED)
