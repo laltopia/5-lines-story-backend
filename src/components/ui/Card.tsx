@@ -1,7 +1,7 @@
-import { ReactNode } from 'react'
+import { ReactNode, HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
   className?: string
   hover?: boolean
@@ -13,6 +13,7 @@ const Card = ({
   className,
   hover = false,
   padding = 'md',
+  ...props
 }: CardProps) => {
   const paddings = {
     sm: 'p-4',
@@ -28,6 +29,7 @@ const Card = ({
         hover && 'hover:shadow-xl hover:scale-[1.02] cursor-pointer',
         className
       )}
+      {...props}
     >
       {children}
     </div>
