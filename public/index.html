@@ -330,38 +330,61 @@
   </script>
 
   <script>
+    // Wait for Clerk to be ready
+    let clerkReady = false;
+
     // Handle Text card click with auth check
-    function handleTextCardClick(event) {
+    async function handleTextCardClick(event) {
       event.preventDefault();
-      
-      if (window.Clerk && window.Clerk.user) {
-        // User is logged in, go to ai.html
-        window.location.href = '/ai.html';
-      } else if (window.Clerk) {
-        // User is NOT logged in, open sign in
+
+      // Wait for Clerk to be ready
+      if (!window.Clerk) {
+        console.log('Waiting for Clerk to load...');
+        setTimeout(() => handleTextCardClick(event), 300);
+        return;
+      }
+
+      try {
+        await window.Clerk.load();
+
+        if (window.Clerk.user) {
+          // User is logged in, go to ai.html
+          console.log('User authenticated, navigating to /ai.html');
+          window.location.href = '/ai.html';
+        } else {
+          // User is NOT logged in, open sign in
+          console.log('User not authenticated, opening sign in');
+          window.Clerk.openSignIn();
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
         window.Clerk.openSignIn();
-      } else {
-        // Clerk not loaded yet, wait a moment
-        setTimeout(() => handleTextCardClick(event), 500);
       }
     }
 
     window.addEventListener("load", async function () {
-      await window.Clerk.load();
-      
-      const signInBtn = document.getElementById('sign-in-btn');
-      const myStoriesLink = document.getElementById('my-stories-link');
-      const userButtonDiv = document.getElementById('user-button');
-      
-      if (window.Clerk.user) {
-        // User is signed in
-        window.Clerk.mountUserButton(userButtonDiv);
-      } else {
-        // User is NOT signed in
-        signInBtn.classList.remove('hidden');
-        signInBtn.onclick = () => window.Clerk.openSignIn();
-        // Hide My Stories link if not logged in
-        myStoriesLink.style.display = 'none';
+      try {
+        await window.Clerk.load();
+        clerkReady = true;
+
+        const signInBtn = document.getElementById('sign-in-btn');
+        const myStoriesLink = document.getElementById('my-stories-link');
+        const userButtonDiv = document.getElementById('user-button');
+
+        if (window.Clerk.user) {
+          // User is signed in
+          console.log('User is authenticated');
+          window.Clerk.mountUserButton(userButtonDiv);
+        } else {
+          // User is NOT signed in
+          console.log('User is not authenticated');
+          signInBtn.classList.remove('hidden');
+          signInBtn.onclick = () => window.Clerk.openSignIn();
+          // Hide My Stories link if not logged in
+          myStoriesLink.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error initializing Clerk:', error);
       }
     });
   </script>

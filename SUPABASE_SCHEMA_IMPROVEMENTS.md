@@ -421,15 +421,37 @@ BEGIN;
 -- ALTER TABLE conversations ALTER COLUMN user_input SET NOT NULL;
 -- ALTER TABLE conversations ALTER COLUMN ai_response SET NOT NULL;
 
--- Add CHECK constraints
-ALTER TABLE user_limits ADD CONSTRAINT IF NOT EXISTS check_positive_limits
+-- Add CHECK constraints (PostgreSQL doesn't support IF NOT EXISTS for constraints pre-v12)
+-- Drop constraints first if they exist to avoid errors
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_positive_limits') THEN
+        ALTER TABLE user_limits DROP CONSTRAINT check_positive_limits;
+    END IF;
+END $$;
+
+ALTER TABLE user_limits ADD CONSTRAINT check_positive_limits
   CHECK (monthly_story_limit >= 0 AND tokens_limit_monthly >= 0 AND
          stories_used_this_month >= 0 AND tokens_used_this_month >= 0);
 
-ALTER TABLE conversations ADD CONSTRAINT IF NOT EXISTS check_positive_tokens
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_positive_tokens') THEN
+        ALTER TABLE conversations DROP CONSTRAINT check_positive_tokens;
+    END IF;
+END $$;
+
+ALTER TABLE conversations ADD CONSTRAINT check_positive_tokens
   CHECK (tokens_used >= 0 AND input_tokens >= 0 AND output_tokens >= 0);
 
-ALTER TABLE usage_tracking ADD CONSTRAINT IF NOT EXISTS check_positive_tokens_usage
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_positive_tokens_usage') THEN
+        ALTER TABLE usage_tracking DROP CONSTRAINT check_positive_tokens_usage;
+    END IF;
+END $$;
+
+ALTER TABLE usage_tracking ADD CONSTRAINT check_positive_tokens_usage
   CHECK (tokens_used >= 0 AND input_tokens >= 0 AND output_tokens >= 0 AND cost_usd >= 0);
 
 COMMIT;
@@ -440,6 +462,9 @@ COMMIT;
 -- Save as: 003_add_new_tables.sql
 -- Run this when ready to implement draft and metadata features
 BEGIN;
+
+-- Note: We use text for user_id because we're using Clerk (not Supabase Auth)
+-- Clerk user IDs are strings like "user_2abc123..."
 
 CREATE TABLE IF NOT EXISTS story_drafts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

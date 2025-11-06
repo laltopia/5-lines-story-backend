@@ -79,14 +79,14 @@ function renderStories(stories) {
     });
 
     return `
-      <div class="story-card" onclick="openStoryModal('${escapeHtml(story.id)}')">
+      <div class="story-card" onclick="openStoryModal('${story.id}')">
         <div class="story-header">
           <div class="story-date">${escapeHtml(date)}</div>
           <div class="story-actions" onclick="event.stopPropagation()">
-            <button class="icon-btn" onclick="shareStory('${escapeHtml(story.id)}')" title="Share">
+            <button class="icon-btn" onclick="shareStory('${story.id}')" title="Share">
               📤
             </button>
-            <button class="icon-btn" onclick="deleteStory('${escapeHtml(story.id)}')" title="Delete">
+            <button class="icon-btn" onclick="deleteStory('${story.id}')" title="Delete">
               🗑️
             </button>
           </div>
