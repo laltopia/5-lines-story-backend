@@ -85,21 +85,32 @@ function goToStep(stepNumber) {
 // ============================================
 async function submitInput() {
   const input = document.getElementById('userInput').value.trim();
-  
+
+  console.log('submitInput called, input length:', input.length);
+
   if (!input) {
     alert('Please enter your story idea');
     return;
   }
-  
+
+  if (input.length < 10) {
+    alert('Please enter at least 10 characters for your story idea');
+    return;
+  }
+
+  console.log('Input valid, proceeding...');
   appState.userInput = input;
   goToStep(2);
-  
+
   document.getElementById('loading1').classList.remove('hidden');
   document.getElementById('pathsGrid').innerHTML = '';
-  
+
   try {
+    console.log('Getting Clerk token...');
     const token = await window.Clerk.session.getToken();
-    
+    console.log('Token obtained:', token ? 'YES' : 'NO');
+
+    console.log('Sending request to /api/ai/suggest-paths');
     const response = await fetch('/api/ai/suggest-paths', {
       method: 'POST',
       headers: {
@@ -108,26 +119,31 @@ async function submitInput() {
       },
       body: JSON.stringify({ userInput: input })
     });
-    
+
+    console.log('Response status:', response.status);
     const data = await response.json();
-    
+    console.log('Response data:', data);
+
     document.getElementById('loading1').classList.add('hidden');
-    
+
     if (data.success) {
+      console.log('Success! Paths:', data.paths);
       appState.suggestedPaths = data.paths;
       renderPaths(data.paths);
       await loadUsage();
     } else if (data.error === 'Limit reached') {
+      console.error('Limit reached:', data.message);
       alert(data.message);
       goToStep(1);
     } else {
-      alert('Error generating paths: ' + data.error);
+      console.error('Error from server:', data.error, data.details);
+      alert('Error generating paths: ' + data.error + (data.details ? '\n\nDetails: ' + JSON.stringify(data.details) : ''));
       goToStep(1);
     }
   } catch (error) {
     document.getElementById('loading1').classList.add('hidden');
-    console.error('Error:', error);
-    alert('Error connecting to server');
+    console.error('Exception in submitInput:', error);
+    alert('Error connecting to server: ' + error.message);
     goToStep(1);
   }
 }
