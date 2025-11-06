@@ -270,11 +270,11 @@
     <p class="main-subtitle">Choose how you'd like to share your content</p>
 
     <div class="cards-container">
-      <a href="#" class="card" id="text-card" onclick="handleTextCardClick(event)">
+      <div class="card" id="text-card">
         <div class="card-icon">📝</div>
         <h3 class="card-title">Text</h3>
         <p class="card-description">Paste or type content</p>
-      </a>
+      </div>
 
       <div class="card coming-soon" onclick="alert('Audio input coming soon!')">
         <div class="card-icon">🎤</div>
@@ -330,61 +330,71 @@
   </script>
 
   <script>
-    // Wait for Clerk to be ready
-    let clerkReady = false;
+    console.log('Script loaded');
 
-    // Handle Text card click with auth check
-    async function handleTextCardClick(event) {
-      event.preventDefault();
-
-      // Wait for Clerk to be ready
-      if (!window.Clerk) {
-        console.log('Waiting for Clerk to load...');
-        setTimeout(() => handleTextCardClick(event), 300);
-        return;
-      }
-
-      try {
-        await window.Clerk.load();
-
-        if (window.Clerk.user) {
-          // User is logged in, go to ai.html
-          console.log('User authenticated, navigating to /ai.html');
-          window.location.href = '/ai.html';
-        } else {
-          // User is NOT logged in, open sign in
-          console.log('User not authenticated, opening sign in');
-          window.Clerk.openSignIn();
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error);
-        window.Clerk.openSignIn();
-      }
-    }
-
+    // Initialize when page loads
     window.addEventListener("load", async function () {
+      console.log('Page loaded, initializing...');
+
       try {
+        // Wait for Clerk to be available
+        let attempts = 0;
+        while (!window.Clerk && attempts < 20) {
+          console.log('Waiting for Clerk... attempt', attempts + 1);
+          await new Promise(resolve => setTimeout(resolve, 200));
+          attempts++;
+        }
+
+        if (!window.Clerk) {
+          console.error('Clerk failed to load after 4 seconds');
+          return;
+        }
+
+        console.log('Clerk found, loading...');
         await window.Clerk.load();
-        clerkReady = true;
+        console.log('Clerk loaded successfully');
 
         const signInBtn = document.getElementById('sign-in-btn');
         const myStoriesLink = document.getElementById('my-stories-link');
         const userButtonDiv = document.getElementById('user-button');
+        const textCard = document.getElementById('text-card');
 
+        // Setup Text card click handler
+        textCard.addEventListener('click', async function() {
+          console.log('Text card clicked!');
+
+          try {
+            await window.Clerk.load();
+
+            if (window.Clerk.user) {
+              console.log('User is authenticated, navigating to /ai.html');
+              window.location.href = '/ai.html';
+            } else {
+              console.log('User not authenticated, opening sign in');
+              window.Clerk.openSignIn();
+            }
+          } catch (error) {
+            console.error('Error in card click:', error);
+            alert('Error: ' + error.message);
+          }
+        });
+
+        // Setup UI based on auth state
         if (window.Clerk.user) {
-          // User is signed in
           console.log('User is authenticated');
           window.Clerk.mountUserButton(userButtonDiv);
         } else {
-          // User is NOT signed in
           console.log('User is not authenticated');
           signInBtn.classList.remove('hidden');
-          signInBtn.onclick = () => window.Clerk.openSignIn();
-          // Hide My Stories link if not logged in
+          signInBtn.onclick = () => {
+            console.log('Sign in button clicked');
+            window.Clerk.openSignIn();
+          };
           myStoriesLink.style.display = 'none';
         }
       } catch (error) {
-        console.error('Error initializing Clerk:', error);
+        console.error('Error initializing:', error);
+        alert('Initialization error: ' + error.message);
       }
     });
   </script>
