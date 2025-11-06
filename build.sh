@@ -20,10 +20,16 @@ echo "📦 Package Info:"
 cat package.json | grep -A2 '"name"' | head -3
 echo ""
 
-# Step 1: Clean install dependencies
-echo "📦 Installing dependencies with npm ci..."
-echo "  Note: npm ci will install EXACTLY what's in package-lock.json"
-npm ci
+# Step 1: Force fresh package-lock.json (bypass Render cache)
+echo "🗑️  Removing cached package-lock.json..."
+rm -f package-lock.json
+echo "  Deleted to force fresh dependency resolution"
+echo ""
+
+# Step 2: Install dependencies and generate fresh lock file
+echo "📦 Installing dependencies with npm install..."
+echo "  Note: This will generate a fresh package-lock.json from package.json"
+npm install --legacy-peer-deps
 
 # Count installed packages
 echo ""
