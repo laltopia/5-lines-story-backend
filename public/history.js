@@ -1,4 +1,17 @@
 // ============================================
+// SECURITY: HTML ESCAPING TO PREVENT XSS
+// ============================================
+function escapeHtml(unsafe) {
+  if (typeof unsafe !== 'string') return unsafe;
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// ============================================
 // ESTADO DA APLICAÇÃO
 // ============================================
 let appState = {
@@ -46,17 +59,17 @@ async function loadStories() {
 }
 
 // ============================================
-// RENDERIZAR HISTÓRIAS
+// RENDERIZAR HISTÓRIAS (XSS PROTECTED)
 // ============================================
 function renderStories(stories) {
   const grid = document.getElementById('storiesGrid');
-  
+
   if (stories.length === 0) {
     document.getElementById('emptyState').classList.remove('hidden');
     grid.classList.add('hidden');
     return;
   }
-  
+
   grid.innerHTML = stories.map(story => {
     const aiResponse = JSON.parse(story.ai_response);
     const date = new Date(story.created_at).toLocaleDateString('en-US', {
@@ -64,31 +77,31 @@ function renderStories(stories) {
       day: 'numeric',
       year: 'numeric'
     });
-    
+
     return `
-      <div class="story-card" onclick="openStoryModal('${story.id}')">
+      <div class="story-card" onclick="openStoryModal('${escapeHtml(story.id)}')">
         <div class="story-header">
-          <div class="story-date">${date}</div>
+          <div class="story-date">${escapeHtml(date)}</div>
           <div class="story-actions" onclick="event.stopPropagation()">
-            <button class="icon-btn" onclick="shareStory('${story.id}')" title="Share">
+            <button class="icon-btn" onclick="shareStory('${escapeHtml(story.id)}')" title="Share">
               📤
             </button>
-            <button class="icon-btn" onclick="deleteStory('${story.id}')" title="Delete">
+            <button class="icon-btn" onclick="deleteStory('${escapeHtml(story.id)}')" title="Delete">
               🗑️
             </button>
           </div>
         </div>
-        
+
         <div class="story-preview">
           ${Object.entries(aiResponse).slice(0, 3).map(([key, value], index) => `
             <div class="story-line">
               <div class="line-number">${index + 1}</div>
-              <div class="line-text">${value}</div>
+              <div class="line-text">${escapeHtml(value)}</div>
             </div>
           `).join('')}
           ${Object.keys(aiResponse).length > 3 ? '<div style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 8px;">... +2 more lines</div>' : ''}
         </div>
-        
+
         <div class="story-footer">
           <span>${story.tokens_used} tokens</span>
           <span>5 lines</span>
@@ -120,14 +133,14 @@ function filterStories() {
 }
 
 // ============================================
-// ABRIR MODAL COM HISTÓRIA COMPLETA
+// ABRIR MODAL COM HISTÓRIA COMPLETA (XSS PROTECTED)
 // ============================================
 function openStoryModal(storyId) {
   const story = appState.stories.find(s => s.id === storyId);
   if (!story) return;
-  
+
   appState.currentStory = story;
-  
+
   const aiResponse = JSON.parse(story.ai_response);
   const date = new Date(story.created_at).toLocaleDateString('en-US', {
     month: 'long',
@@ -136,7 +149,7 @@ function openStoryModal(storyId) {
     hour: '2-digit',
     minute: '2-digit'
   });
-  
+
   const lineLabels = [
     'Context / Initial Situation',
     'Desire / Objective',
@@ -144,9 +157,9 @@ function openStoryModal(storyId) {
     'Action / Attempt',
     'Result / Transformation'
   ];
-  
+
   document.getElementById('modalTitle').textContent = `Story from ${date}`;
-  
+
   const modalBody = document.getElementById('modalBody');
   modalBody.innerHTML = `
     <div style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
@@ -154,21 +167,21 @@ function openStoryModal(storyId) {
         Original Input
       </div>
       <div style="font-size: 14px; color: #374151; line-height: 1.6;">
-        ${story.user_input}
+        ${escapeHtml(story.user_input)}
       </div>
     </div>
-    
+
     ${Object.entries(aiResponse).map(([key, value], index) => `
       <div class="modal-story-line">
         <div class="modal-line-label">
           <div class="line-number">${index + 1}</div>
-          <span>${lineLabels[index]}</span>
+          <span>${escapeHtml(lineLabels[index])}</span>
         </div>
-        <div class="modal-line-content">${value}</div>
+        <div class="modal-line-content">${escapeHtml(value)}</div>
       </div>
     `).join('')}
   `;
-  
+
   document.getElementById('storyModal').classList.add('active');
 }
 

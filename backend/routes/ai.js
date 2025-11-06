@@ -3,10 +3,11 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const supabase = require('../config/supabase');
 const { requireAuthentication } = require('../middleware/auth');
-const { 
-  getPrompt, 
-  detectLanguage, 
-  estimateTokens 
+const { validate, aiSchemas, sanitizeForAI } = require('../utils/validation');
+const {
+  getPrompt,
+  detectLanguage,
+  estimateTokens
 } = require('../config/prompts');
 
 // Inicializar cliente Anthropic
@@ -119,36 +120,32 @@ async function incrementStoryCount(userId) {
 }
 
 // ============================================
-// ENDPOINT 1: Sugerir 3 Caminhos
+// ENDPOINT 1: Sugerir 3 Caminhos (PROTECTED + VALIDATED)
 // ============================================
-router.post('/suggest-paths', requireAuthentication, async (req, res) => {
+router.post('/suggest-paths', requireAuthentication, validate(aiSchemas.suggestPaths), async (req, res) => {
   try {
     const { userInput } = req.body;
     const userId = req.auth.userId;
-    
-    if (!userInput || userInput.trim().length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'User input is required' 
-      });
-    }
+
+    // Sanitize input to prevent prompt injection
+    const sanitizedInput = sanitizeForAI(userInput);
 
     await ensureUserTracking(userId);
 
-    const language = detectLanguage(userInput);
+    const language = detectLanguage(sanitizedInput);
 
     const systemPrompt = getPrompt('suggest_paths');
-    const { content, usage } = await callClaude(systemPrompt, userInput);
+    const { content, usage } = await callClaude(systemPrompt, sanitizedInput);
 
     let paths;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       paths = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch (parseError) {
+      console.error('AI response parsing error:', parseError);
       return res.status(500).json({
         success: false,
-        error: 'Failed to parse AI response',
-        raw: content
+        error: 'Failed to process AI response. Please try again.'
       });
     }
 
@@ -180,39 +177,42 @@ router.post('/suggest-paths', requireAuthentication, async (req, res) => {
     console.error('Error in suggest-paths:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to generate story paths. Please try again later.'
     });
   }
 });
 
 // ============================================
-// ENDPOINT 2: Gerar História Completa
+// ENDPOINT 2: Gerar História Completa (PROTECTED + VALIDATED)
 // ============================================
-router.post('/generate-story', requireAuthentication, async (req, res) => {
+router.post('/generate-story', requireAuthentication, validate(aiSchemas.generateStory), async (req, res) => {
   try {
-    const { 
+    const {
       userInput,
       selectedPath,
       customDescription
     } = req.body;
-    
+
     const userId = req.auth.userId;
-    
-    if (!userInput || userInput.trim().length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'User input is required' 
-      });
-    }
+
+    // Sanitize all user inputs to prevent prompt injection
+    const sanitizedInput = sanitizeForAI(userInput);
+    const sanitizedCustomDesc = customDescription ? sanitizeForAI(customDescription) : null;
 
     await ensureUserTracking(userId);
 
-    let fullPrompt = `INPUT ORIGINAL:\n${userInput}\n\n`;
-    
-    if (customDescription) {
-      fullPrompt += `DIRECIONAMENTO ESCOLHIDO PELO USUÁRIO:\n${customDescription}`;
+    let fullPrompt = `INPUT ORIGINAL:\n${sanitizedInput}\n\n`;
+
+    if (sanitizedCustomDesc) {
+      fullPrompt += `DIRECIONAMENTO ESCOLHIDO PELO USUÁRIO:\n${sanitizedCustomDesc}`;
     } else if (selectedPath) {
-      fullPrompt += `CAMINHO ESCOLHIDO:\nTítulo: ${selectedPath.title}\nDescrição: ${selectedPath.description}\nFoco: ${selectedPath.focus}`;
+      // Sanitize path fields too
+      const sanitizedPath = {
+        title: sanitizeForAI(selectedPath.title || ''),
+        description: sanitizeForAI(selectedPath.description || ''),
+        focus: sanitizeForAI(selectedPath.focus || '')
+      };
+      fullPrompt += `CAMINHO ESCOLHIDO:\nTítulo: ${sanitizedPath.title}\nDescrição: ${sanitizedPath.description}\nFoco: ${sanitizedPath.focus}`;
     } else {
       fullPrompt += `INSTRUÇÃO: Crie uma história seguindo o input original.`;
     }
@@ -225,10 +225,10 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       storyData = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch (parseError) {
+      console.error('AI response parsing error:', parseError);
       return res.status(500).json({
         success: false,
-        error: 'Failed to parse AI response',
-        raw: content
+        error: 'Failed to process AI response. Please try again.'
       });
     }
 
@@ -282,44 +282,47 @@ router.post('/generate-story', requireAuthentication, async (req, res) => {
     console.error('Error in generate-story:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to generate story. Please try again later.'
     });
   }
 });
 
 // ============================================
-// ENDPOINT 3: Refinar Linha Específica
+// ENDPOINT 3: Refinar Linha Específica (PROTECTED + VALIDATED)
 // ============================================
-router.post('/refine-line', requireAuthentication, async (req, res) => {
+router.post('/refine-line', requireAuthentication, validate(aiSchemas.refineLine), async (req, res) => {
   try {
-    const { 
+    const {
       currentStory,
       lineNumber,
       userSuggestion,
       conversationId
     } = req.body;
-    
+
     const userId = req.auth.userId;
-    
-    if (!currentStory || !lineNumber || !userSuggestion) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields' 
-      });
-    }
 
     await ensureUserTracking(userId);
 
+    // Sanitize all story lines and user suggestion to prevent prompt injection
+    const sanitizedStory = {
+      line1: sanitizeForAI(currentStory.line1 || ''),
+      line2: sanitizeForAI(currentStory.line2 || ''),
+      line3: sanitizeForAI(currentStory.line3 || ''),
+      line4: sanitizeForAI(currentStory.line4 || ''),
+      line5: sanitizeForAI(currentStory.line5 || '')
+    };
+    const sanitizedSuggestion = sanitizeForAI(userSuggestion);
+
     const fullPrompt = `
 HISTÓRIA ATUAL:
-Linha 1: ${currentStory.line1}
-Linha 2: ${currentStory.line2}
-Linha 3: ${currentStory.line3}
-Linha 4: ${currentStory.line4}
-Linha 5: ${currentStory.line5}
+Linha 1: ${sanitizedStory.line1}
+Linha 2: ${sanitizedStory.line2}
+Linha 3: ${sanitizedStory.line3}
+Linha 4: ${sanitizedStory.line4}
+Linha 5: ${sanitizedStory.line5}
 
 LINHA A MODIFICAR: ${lineNumber}
-SUGESTÃO DO USUÁRIO: ${userSuggestion}
+SUGESTÃO DO USUÁRIO: ${sanitizedSuggestion}
 `;
 
     const systemPrompt = getPrompt('refine_line');
@@ -330,10 +333,10 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       refinedData = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch (parseError) {
+      console.error('AI response parsing error:', parseError);
       return res.status(500).json({
         success: false,
-        error: 'Failed to parse AI response',
-        raw: content
+        error: 'Failed to process AI response. Please try again.'
       });
     }
 
@@ -378,7 +381,7 @@ SUGESTÃO DO USUÁRIO: ${userSuggestion}
     console.error('Error in refine-line:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to refine story line. Please try again later.'
     });
   }
 });
@@ -422,9 +425,10 @@ router.get('/usage', requireAuthentication, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching usage:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to fetch usage data. Please try again later.'
     });
   }
 });
@@ -451,9 +455,10 @@ router.get('/history', requireAuthentication, async (req, res) => {
       conversations: data
     });
   } catch (error) {
+    console.error('Error fetching history:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to fetch story history. Please try again later.'
     });
   }
 });
@@ -497,7 +502,7 @@ router.delete('/history/:id', requireAuthentication, async (req, res) => {
     console.error('Error deleting story:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Failed to delete story. Please try again later.'
     });
   }
 });

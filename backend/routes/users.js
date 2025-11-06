@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../config/supabase');
+const { requireAuthentication } = require('../middleware/auth');
+const { validate, userSchemas } = require('../utils/validation');
 
-// GET - Buscar todos os usuarios
-router.get('/', async (req, res) => {
+// GET - Buscar todos os usuarios (PROTECTED)
+router.get('/', requireAuthentication, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('users')
@@ -12,30 +14,24 @@ router.get('/', async (req, res) => {
     
     if (error) throw error;
     
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       count: data.length,
-      users: data 
+      users: data
     });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch users. Please try again later.'
     });
   }
 });
 
-// POST - Criar novo usuario
-router.post('/', async (req, res) => {
+// POST - Criar novo usuario (PROTECTED + VALIDATED)
+router.post('/', requireAuthentication, validate(userSchemas.create), async (req, res) => {
   try {
     const { name, email } = req.body;
-    
-    if (!name || !email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Name and email are required' 
-      });
-    }
     
     const { data, error } = await supabase
       .from('users')
@@ -44,21 +40,22 @@ router.post('/', async (req, res) => {
     
     if (error) throw error;
     
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'User created successfully!',
-      user: data[0] 
+      user: data[0]
     });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error('Error creating user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create user. Please try again later.'
     });
   }
 });
 
-// GET - Buscar usuario por ID
-router.get('/:id', async (req, res) => {
+// GET - Buscar usuario por ID (PROTECTED)
+router.get('/:id', requireAuthentication, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -70,14 +67,15 @@ router.get('/:id', async (req, res) => {
     
     if (error) throw error;
     
-    res.json({ 
-      success: true, 
-      user: data 
+    res.json({
+      success: true,
+      user: data
     });
   } catch (error) {
-    res.status(404).json({ 
-      success: false, 
-      error: 'User not found' 
+    console.error('Error fetching user by ID:', error);
+    res.status(404).json({
+      success: false,
+      error: 'User not found'
     });
   }
 });

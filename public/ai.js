@@ -1,4 +1,17 @@
 // ============================================
+// SECURITY: HTML ESCAPING TO PREVENT XSS
+// ============================================
+function escapeHtml(unsafe) {
+  if (typeof unsafe !== 'string') return unsafe;
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// ============================================
 // ESTADO DA APLICAÇÃO
 // ============================================
 let appState = {
@@ -120,16 +133,16 @@ async function submitInput() {
 }
 
 // ============================================
-// RENDERIZAR CAMINHOS
+// RENDERIZAR CAMINHOS (XSS PROTECTED)
 // ============================================
 function renderPaths(paths) {
   const grid = document.getElementById('pathsGrid');
-  
+
   grid.innerHTML = paths.map((path, index) => `
     <div class="path-card" onclick="selectPath(${index})" id="path-${index}">
-      <div class="path-title">${path.title}</div>
-      <div class="path-description">${path.description}</div>
-      <div class="path-focus">${path.focus}</div>
+      <div class="path-title">${escapeHtml(path.title)}</div>
+      <div class="path-description">${escapeHtml(path.description)}</div>
+      <div class="path-focus">${escapeHtml(path.focus)}</div>
     </div>
   `).join('');
 }
@@ -214,11 +227,11 @@ async function generateStory() {
 }
 
 // ============================================
-// RENDERIZAR HISTÓRIA
+// RENDERIZAR HISTÓRIA (XSS PROTECTED)
 // ============================================
 function renderStory(story) {
   const linesContainer = document.getElementById('storyLines');
-  
+
   const lineLabels = [
     'Context / Initial Situation',
     'Desire / Objective',
@@ -226,17 +239,17 @@ function renderStory(story) {
     'Action / Attempt',
     'Result / Transformation'
   ];
-  
+
   linesContainer.innerHTML = Object.keys(story).map((key, index) => {
     const lineNumber = index + 1;
     return `
       <div class="story-line" id="line-container-${lineNumber}">
         <div class="line-label">
           <div class="line-number">${lineNumber}</div>
-          <span>${lineLabels[index]}</span>
+          <span>${escapeHtml(lineLabels[index])}</span>
         </div>
         <div class="line-content editable" id="line-content-${lineNumber}" onclick="editLine(${lineNumber})">
-          ${story[key]}
+          ${escapeHtml(story[key])}
         </div>
       </div>
     `;
@@ -547,15 +560,15 @@ function shareStory() {
       justify-content: center;
       z-index: 1000;
     `;
-    
+
     modal.innerHTML = `
       <div style="background: white; border-radius: 16px; padding: 32px; max-width: 600px; margin: 20px;">
         <h3 style="margin-bottom: 16px;">Your Story</h3>
-        <textarea readonly style="width: 100%; min-height: 300px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px;">${fullText}</textarea>
+        <textarea readonly style="width: 100%; min-height: 300px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px;">${escapeHtml(fullText)}</textarea>
         <button class="btn btn-primary btn-full" style="margin-top: 16px;" onclick="this.parentElement.parentElement.remove()">Close</button>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
     modal.onclick = (e) => {
       if (e.target === modal) modal.remove();
