@@ -1,10 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const apiKey = process.env.ANTHROPIC_API_KEY
-
-if (!apiKey) {
-  throw new Error('Missing ANTHROPIC_API_KEY environment variable')
-}
+// Use placeholder during build, real value at runtime
+const apiKey = process.env.ANTHROPIC_API_KEY || 'placeholder-anthropic-key'
 
 export const anthropic = new Anthropic({
   apiKey,
