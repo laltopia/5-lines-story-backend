@@ -1,11 +1,22 @@
 # Render Configuration Guide
 
-## Critical Issue: Build Command Not Running
+## 🚨 CRITICAL: Clear Build Cache First!
 
-Your Render deployment is currently configured to only run `npm install`, which doesn't build the Next.js application. This causes the error:
+**IMPORTANT:** Before making any changes, you MUST clear Render's build cache:
 
+1. Go to Render Dashboard → your service (5-lines-story)
+2. Click **Settings** → Scroll to **Build & Deploy**
+3. Click **"Clear build cache"** button
+4. Confirm the action
+
+Render may be using a cached version of package-lock.json from a previous build, causing only 102 packages to be installed instead of the required 447 packages.
+
+## Issue: Wrong Build Command or Cached Dependencies
+
+Your deployment may show errors like:
 ```
-Error: Could not find a production build in the '.next' directory.
+added 102 packages (should be ~448)
+Module not found: Can't resolve '@/components/Navbar'
 ```
 
 ## Solution: Update Render Dashboard Settings
