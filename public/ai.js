@@ -332,6 +332,12 @@ function renderStory(story) {
 async function editLine(lineNumber) {
   console.log(`editLine called for line ${lineNumber}`);
 
+  // GUARD: If already editing this exact line, do nothing (prevents duplicate calls)
+  if (appState.editingLine === lineNumber) {
+    console.log(`Already editing line ${lineNumber}, ignoring duplicate call`);
+    return;
+  }
+
   // Se já está editando outra linha, salvar automaticamente
   if (appState.editingLine && appState.editingLine !== lineNumber) {
     await saveEditDirectly(false); // false = não mostrar notificação
@@ -434,12 +440,17 @@ function cancelEdit() {
   const originalText = appState.editingOriginalContent;
 
   // Restaurar conteúdo original
-  const lineElement = document.getElementById(`line-content-${lineNumber}`);
+  let lineElement = document.getElementById(`line-content-${lineNumber}`);
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = originalText;
 
-  // Re-attach click handler via addEventListener (CSP compliant)
+  // CRITICAL FIX: Clone element to remove ALL old event listeners (prevents accumulation)
+  const newLineElement = lineElement.cloneNode(true);
+  lineElement.replaceWith(newLineElement);
+  lineElement = newLineElement;
+
+  // Attach fresh click handler (CSP compliant)
   lineElement.addEventListener('click', function() {
     console.log(`Story line ${lineNumber} clicked for editing after cancel`);
     editLine(lineNumber);
@@ -457,30 +468,35 @@ function cancelEdit() {
 // ============================================
 async function saveEditDirectly(showNotif = true) {
   if (!appState.editingLine) return;
-  
+
   const lineNumber = appState.editingLine;
   const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
-  
+
   if (!textarea) return;
-  
+
   const newText = textarea.value.trim();
-  
+
   if (!newText) {
     alert('Please enter some text');
     return;
   }
-  
+
   // Atualizar estado
   const lineKey = `line${lineNumber}`;
   appState.currentStory[lineKey] = newText;
-  
+
   // Re-renderizar linha (sair do modo de edição)
-  const lineElement = document.getElementById(`line-content-${lineNumber}`);
+  let lineElement = document.getElementById(`line-content-${lineNumber}`);
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = newText;
 
-  // Re-attach click handler via addEventListener (CSP compliant)
+  // CRITICAL FIX: Clone element to remove ALL old event listeners (prevents accumulation)
+  const newLineElement = lineElement.cloneNode(true);
+  lineElement.replaceWith(newLineElement);
+  lineElement = newLineElement;
+
+  // Attach fresh click handler (CSP compliant)
   lineElement.addEventListener('click', function() {
     console.log(`Story line ${lineNumber} clicked for editing after save`);
     editLine(lineNumber);
