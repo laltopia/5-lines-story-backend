@@ -156,31 +156,64 @@ async function submitInput() {
 console.log('submitInput function defined:', typeof submitInput);
 
 // ============================================
-// RENDERIZAR CAMINHOS (XSS PROTECTED)
+// RENDERIZAR CAMINHOS (XSS PROTECTED + CSP COMPLIANT)
 // ============================================
 function renderPaths(paths) {
+  console.log('renderPaths called with', paths.length, 'paths');
   const grid = document.getElementById('pathsGrid');
 
+  // Render HTML without inline onclick (CSP blocks it)
   grid.innerHTML = paths.map((path, index) => `
-    <div class="path-card" onclick="selectPath(${index})" id="path-${index}">
+    <div class="path-card" id="path-${index}" data-index="${index}">
       <div class="path-title">${escapeHtml(path.title)}</div>
       <div class="path-description">${escapeHtml(path.description)}</div>
       <div class="path-focus">${escapeHtml(path.focus)}</div>
     </div>
   `).join('');
+
+  // CRITICAL: Add click handlers via addEventListener (CSP compliant)
+  console.log('Attaching click handlers to path cards...');
+  paths.forEach((path, index) => {
+    const pathCard = document.getElementById(`path-${index}`);
+    if (pathCard) {
+      pathCard.addEventListener('click', function() {
+        console.log(`Path card ${index} clicked:`, path.title);
+        selectPath(index);
+      });
+      console.log(`Click handler attached to path-${index}`);
+    } else {
+      console.error(`Path card path-${index} not found!`);
+    }
+  });
+  console.log('All path card handlers attached successfully');
 }
 
 // ============================================
 // SELECIONAR CAMINHO
 // ============================================
 function selectPath(index) {
+  console.log('selectPath called with index:', index);
+  console.log('Available paths:', appState.suggestedPaths.length);
+
+  // Remove 'selected' class from all cards
   document.querySelectorAll('.path-card').forEach(card => {
     card.classList.remove('selected');
   });
-  
-  document.getElementById(`path-${index}`).classList.add('selected');
+
+  // Add 'selected' class to clicked card
+  const selectedCard = document.getElementById(`path-${index}`);
+  if (selectedCard) {
+    selectedCard.classList.add('selected');
+    console.log('Path card marked as selected:', selectedCard);
+  } else {
+    console.error('Could not find path card:', `path-${index}`);
+  }
+
+  // Store selected path in state
   appState.selectedPath = appState.suggestedPaths[index];
-  
+  console.log('Selected path:', appState.selectedPath);
+
+  // Clear custom path input
   document.getElementById('customPath').value = '';
   appState.customPath = '';
 }
@@ -263,6 +296,7 @@ function renderStory(story) {
     'Result / Transformation'
   ];
 
+  // Render HTML without onclick (CSP blocks it)
   linesContainer.innerHTML = Object.keys(story).map((key, index) => {
     const lineNumber = index + 1;
     return `
@@ -271,67 +305,118 @@ function renderStory(story) {
           <div class="line-number">${lineNumber}</div>
           <span>${escapeHtml(lineLabels[index])}</span>
         </div>
-        <div class="line-content editable" id="line-content-${lineNumber}" onclick="editLine(${lineNumber})">
+        <div class="line-content editable" id="line-content-${lineNumber}" data-line="${lineNumber}">
           ${escapeHtml(story[key])}
         </div>
       </div>
     `;
   }).join('');
+
+  // CRITICAL: Attach click handlers via addEventListener (CSP compliant)
+  console.log('Attaching click handlers to story lines...');
+  for (let i = 1; i <= 5; i++) {
+    const lineElement = document.getElementById(`line-content-${i}`);
+    if (lineElement) {
+      lineElement.addEventListener('click', function() {
+        console.log(`Story line ${i} clicked for editing`);
+        editLine(i);
+      });
+      console.log(`✓ Click handler attached to line ${i}`);
+    }
+  }
 }
 
 // ============================================
 // EDITAR LINHA
 // ============================================
 async function editLine(lineNumber) {
+  console.log(`editLine called for line ${lineNumber}`);
+
   // Se já está editando outra linha, salvar automaticamente
   if (appState.editingLine && appState.editingLine !== lineNumber) {
     await saveEditDirectly(false); // false = não mostrar notificação
   }
-  
+
   appState.editingLine = lineNumber;
-  
+
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
   const currentText = lineElement.textContent.trim();
-  
+
   // Guardar conteúdo original para poder cancelar
   appState.editingOriginalContent = currentText;
-  
+
   lineElement.classList.add('editing');
   lineElement.classList.remove('editable');
-  lineElement.onclick = null;
-  
+
+  // Render editing UI without onclick (CSP blocks it)
   lineElement.innerHTML = `
-    <textarea 
-      id="edit-textarea-${lineNumber}" 
+    <textarea
+      id="edit-textarea-${lineNumber}"
       style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #6366f1; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical;"
     >${currentText}</textarea>
     <div style="display: flex; gap: 8px; margin-top: 12px; padding: 12px; background: white; align-items: center;">
-      <button 
-        class="btn btn-secondary" 
-        onclick="cancelEdit()" 
+      <button
+        id="cancel-edit-btn-${lineNumber}"
+        class="btn btn-secondary"
         style="padding: 10px 20px;"
       >
         Cancel
       </button>
-      <button 
-        onclick="saveEditDirectly(true)" 
+      <button
+        id="save-edit-btn-${lineNumber}"
         style="width: 40px; height: 40px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s;"
-        onmouseover="this.style.background='#059669'"
-        onmouseout="this.style.background='#10b981'"
         title="Save"
       >
         ✓
       </button>
-      <button 
-        class="btn btn-primary" 
-        onclick="saveEditWithAI()" 
+      <button
+        id="refine-ai-btn-${lineNumber}"
+        class="btn btn-primary"
         style="padding: 10px 20px; flex: 1;"
       >
         ✨ Refine with AI
       </button>
     </div>
   `;
-  
+
+  // CRITICAL: Attach event listeners (CSP compliant)
+  const cancelBtn = document.getElementById(`cancel-edit-btn-${lineNumber}`);
+  const saveBtn = document.getElementById(`save-edit-btn-${lineNumber}`);
+  const refineBtn = document.getElementById(`refine-ai-btn-${lineNumber}`);
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Cancel edit button clicked');
+      cancelEdit();
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Save edit button clicked');
+      saveEditDirectly(true);
+    });
+    // Add hover effects via JavaScript
+    saveBtn.addEventListener('mouseover', function() {
+      this.style.background = '#059669';
+    });
+    saveBtn.addEventListener('mouseout', function() {
+      this.style.background = '#10b981';
+    });
+  }
+
+  if (refineBtn) {
+    refineBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Refine with AI button clicked');
+      saveEditWithAI();
+    });
+  }
+
+  console.log('Edit mode activated with all event listeners attached');
+
   const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
   if (textarea) {
     textarea.focus();
@@ -344,20 +429,27 @@ async function editLine(lineNumber) {
 // ============================================
 function cancelEdit() {
   if (!appState.editingLine) return;
-  
+
   const lineNumber = appState.editingLine;
   const originalText = appState.editingOriginalContent;
-  
+
   // Restaurar conteúdo original
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = originalText;
-  lineElement.onclick = () => editLine(lineNumber);
-  
+
+  // Re-attach click handler via addEventListener (CSP compliant)
+  lineElement.addEventListener('click', function() {
+    console.log(`Story line ${lineNumber} clicked for editing after cancel`);
+    editLine(lineNumber);
+  });
+
   // Limpar estado de edição
   appState.editingLine = null;
   appState.editingOriginalContent = null;
+
+  console.log(`Edit cancelled for line ${lineNumber}, original text restored`);
 }
 
 // ============================================
@@ -387,15 +479,22 @@ async function saveEditDirectly(showNotif = true) {
   lineElement.classList.remove('editing');
   lineElement.classList.add('editable');
   lineElement.textContent = newText;
-  lineElement.onclick = () => editLine(lineNumber);
-  
+
+  // Re-attach click handler via addEventListener (CSP compliant)
+  lineElement.addEventListener('click', function() {
+    console.log(`Story line ${lineNumber} clicked for editing after save`);
+    editLine(lineNumber);
+  });
+
   // Limpar estado de edição
   appState.editingLine = null;
   appState.editingOriginalContent = null;
-  
+
   if (showNotif) {
     showNotification(`Line ${lineNumber} saved! ✅`);
   }
+
+  console.log(`Line ${lineNumber} saved directly:`, newText.substring(0, 50) + '...');
 }
 
 // ============================================
@@ -584,18 +683,34 @@ function shareStory() {
       z-index: 1000;
     `;
 
+    // Render modal without onclick (CSP blocks it)
     modal.innerHTML = `
       <div style="background: white; border-radius: 16px; padding: 32px; max-width: 600px; margin: 20px;">
         <h3 style="margin-bottom: 16px;">Your Story</h3>
         <textarea readonly style="width: 100%; min-height: 300px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px;">${escapeHtml(fullText)}</textarea>
-        <button class="btn btn-primary btn-full" style="margin-top: 16px;" onclick="this.parentElement.parentElement.remove()">Close</button>
+        <button id="close-story-modal-btn" class="btn btn-primary btn-full" style="margin-top: 16px;">Close</button>
       </div>
     `;
 
     document.body.appendChild(modal);
-    modal.onclick = (e) => {
-      if (e.target === modal) modal.remove();
-    };
+
+    // CRITICAL: Attach click handler via addEventListener (CSP compliant)
+    const closeBtn = document.getElementById('close-story-modal-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Story modal close button clicked');
+        modal.remove();
+      });
+    }
+
+    // Allow clicking outside modal to close it
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        console.log('Clicked outside modal, closing');
+        modal.remove();
+      }
+    });
   });
 }
 

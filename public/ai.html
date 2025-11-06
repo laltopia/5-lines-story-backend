@@ -620,22 +620,79 @@
         // Load usage
         loadUsage();
 
-        // CRITICAL: Add button click handler (CSP might block inline onclick)
-        console.log('Setting up button click handlers...');
-        const submitButton = document.querySelector('button.btn.btn-primary.btn-full');
-        if (submitButton) {
-          console.log('Submit button found, attaching click handler');
-          // Remove any existing onclick to avoid double-firing
-          submitButton.onclick = null;
-          submitButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Button clicked via addEventListener!');
-            submitInput();
-          });
-          console.log('Click handler attached successfully');
-        } else {
-          console.error('Submit button not found!');
-        }
+        // ============================================
+        // CRITICAL: Add ALL button click handlers via addEventListener
+        // CSP blocks inline onclick handlers
+        // ============================================
+        console.log('Setting up ALL button click handlers for CSP compliance...');
+
+        // Get all buttons with onclick (we'll attach proper listeners)
+        const buttons = document.querySelectorAll('button[onclick]');
+        console.log(`Found ${buttons.length} buttons with onclick attributes`);
+
+        // Attach listeners to each button
+        buttons.forEach(button => {
+          const onclickAttr = button.getAttribute('onclick');
+          console.log('Processing button with onclick:', onclickAttr);
+
+          // Extract function name and arguments from onclick attribute
+          if (onclickAttr.includes('submitInput()')) {
+            button.onclick = null;
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              console.log('Submit Input button clicked via addEventListener');
+              submitInput();
+            });
+            console.log('✓ submitInput() handler attached');
+
+          } else if (onclickAttr.includes('goToStep(1)')) {
+            button.onclick = null;
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              console.log('Go to Step 1 button clicked');
+              goToStep(1);
+            });
+            console.log('✓ goToStep(1) handler attached');
+
+          } else if (onclickAttr.includes('generateStory()')) {
+            button.onclick = null;
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              console.log('Generate Story button clicked via addEventListener');
+              generateStory();
+            });
+            console.log('✓ generateStory() handler attached');
+
+          } else if (onclickAttr.includes('startOver()')) {
+            button.onclick = null;
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              console.log('Start Over button clicked');
+              startOver();
+            });
+            console.log('✓ startOver() handler attached');
+
+          } else if (onclickAttr.includes('shareStory()')) {
+            button.onclick = null;
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              console.log('Share Story button clicked');
+              shareStory();
+            });
+            console.log('✓ shareStory() handler attached');
+
+          } else if (onclickAttr.includes('saveAndGoToHistory()')) {
+            button.onclick = null;
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              console.log('Save & Go to History button clicked');
+              saveAndGoToHistory();
+            });
+            console.log('✓ saveAndGoToHistory() handler attached');
+          }
+        });
+
+        console.log('All button handlers attached successfully!');
       } else {
         console.log('User not authenticated, redirecting to home');
         window.location.href = '/';
