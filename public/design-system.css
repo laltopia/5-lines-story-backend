@@ -387,3 +387,180 @@ textarea {
 .border-purple {
   border-color: var(--purple-primary);
 }
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
+/* ===== SMALL PHONES (< 375px) ===== */
+@media (max-width: 375px) {
+  /* Extra small padding for tiny screens */
+  .card {
+    padding: var(--spacing-md); /* 16px → 16px */
+  }
+
+  /* Smaller heading sizes */
+  h1 {
+    font-size: 32px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+}
+
+/* ===== MOBILE (≤ 768px) ===== */
+@media (max-width: 768px) {
+  /* --- CRITICAL: Fix iOS Zoom Issue --- */
+  /* iOS Safari zooms when font-size < 16px */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important; /* Prevent iOS zoom */
+  }
+
+  /* --- CRITICAL: Increase Tap Target Sizes --- */
+  /* Apple/Android guidelines: 44x44px minimum */
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Ensure buttons have adequate padding for touch */
+  .btn {
+    min-height: 44px;
+    padding: 14px 24px; /* Increased from 12px */
+    font-size: 16px;
+  }
+
+  /* --- Reduce Padding for Mobile --- */
+  .card {
+    padding: var(--spacing-md); /* 32px → 16px */
+  }
+
+  /* Reduce container spacing */
+  .container {
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+  }
+
+  /* --- Improve Text Readability --- */
+  body {
+    font-size: 16px; /* Larger base font */
+    line-height: 1.6; /* Better readability */
+  }
+
+  h1 {
+    font-size: 36px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 28px;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 22px;
+    line-height: 1.4;
+  }
+
+  /* Better spacing between lines */
+  p {
+    line-height: 1.6;
+    margin-bottom: var(--spacing-md);
+  }
+
+  /* --- Modal Fixes --- */
+  /* Fix modal overflow on small screens */
+  .modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    margin: var(--spacing-sm);
+  }
+
+  /* Ensure modal doesn't get cut off */
+  .modal {
+    padding: var(--spacing-sm);
+  }
+
+  /* --- Touch Interaction Improvements --- */
+  /* Larger tap targets between elements */
+  .btn + .btn,
+  .icon-button + .icon-button {
+    margin-left: var(--spacing-sm); /* 8px spacing */
+  }
+
+  /* Larger active states for better touch feedback */
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .icon-button:active {
+    transform: scale(0.95);
+  }
+
+  /* Better touch feedback */
+  .card-clickable:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* --- Textarea Improvements --- */
+  textarea {
+    min-height: 140px; /* Larger on mobile */
+  }
+
+  /* --- Navigation --- */
+  .header {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  /* --- Form Spacing --- */
+  .form-group {
+    margin-bottom: var(--spacing-md);
+  }
+
+  /* --- Ensure minimum tap spacing --- */
+  button,
+  a,
+  input,
+  select {
+    margin-top: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+  }
+}
+
+/* ===== TABLET (769px - 1024px) ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet-specific optimizations */
+  .card {
+    padding: var(--spacing-lg); /* 24px - middle ground */
+  }
+
+  /* Slightly larger fonts for tablets */
+  .btn {
+    font-size: 15px;
+  }
+
+  /* Better spacing for tablet touch targets */
+  .icon-button {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* ===== DESKTOP (> 1024px) ===== */
+@media (min-width: 1025px) {
+  /* Desktop-specific enhancements */
+  .container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
