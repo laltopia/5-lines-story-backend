@@ -120,13 +120,14 @@ function renderStories(stories) {
 function attachStoryCardListeners() {
   const grid = document.getElementById('storiesGrid');
 
-  // Remove old listener if it exists (prevents accumulation)
-  const oldGrid = grid.cloneNode(true);
-  grid.replaceWith(oldGrid);
-  const newGrid = document.getElementById('storiesGrid');
+  // Guard: only attach once (event delegation pattern = single listener)
+  if (grid.dataset.listenerAttached === 'true') {
+    console.log('Event listeners already attached, skipping');
+    return;
+  }
 
   // Event delegation: single listener on grid for all story cards and buttons
-  newGrid.addEventListener('click', (e) => {
+  grid.addEventListener('click', (e) => {
     // Check if clicked on share button
     const shareBtn = e.target.closest('.share-btn');
     if (shareBtn) {
@@ -154,6 +155,8 @@ function attachStoryCardListeners() {
     }
   });
 
+  // Mark as attached to prevent duplicate listeners
+  grid.dataset.listenerAttached = 'true';
   console.log('Story card event listeners attached via event delegation');
 }
 
