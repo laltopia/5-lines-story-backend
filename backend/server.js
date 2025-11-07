@@ -48,13 +48,22 @@ app.use(helmet({
         "https://us.i.posthog.com",
         process.env.SUPABASE_URL
       ].filter(Boolean),
+      workerSrc: ["'self'", "blob:"], // Allow web workers
       frameSrc: ["'self'", "https://*.clerk.accounts.dev"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: []
     }
   },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  permissionsPolicy: {
+    features: {
+      geolocation: ["'none'"],
+      microphone: ["'none'"],
+      camera: ["'none'"],
+      payment: ["'none'"]
+    }
+  }
 }));
 
 // CORS configuration
@@ -111,23 +120,20 @@ app.use(clerkMiddleware({
 // In production, use minified versions
 const publicPath = path.join(__dirname, '../public');
 
-// HTML files - short cache (revalidate often)
+// Optimized caching strategy for Lighthouse performance
 app.use(express.static(publicPath, {
-  maxAge: process.env.NODE_ENV === 'production' ? '5m' : 0, // 5 minutes in production, no cache in dev
+  maxAge: process.env.NODE_ENV === 'production' ? '5m' : 0, // Default 5 minutes in production
   etag: true,
   lastModified: true,
+  immutable: false,
   setHeaders: (res, filePath) => {
-    // Minified assets get longer cache (1 day)
-    if (filePath.endsWith('.min.js') || filePath.endsWith('.min.css')) {
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+    // Versioned static assets get 1 year cache (CSS, JS, fonts, images)
+    if (filePath.match(/\.(css|js|woff|woff2|ttf|eot|jpg|jpeg|png|gif|ico|svg)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // 1 year
     }
-    // HTML files should revalidate
+    // HTML files should revalidate frequently
     else if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate'); // 5 minutes
-    }
-    // Other static files (fonts, images) - 1 week
-    else if (filePath.match(/\.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-      res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
     }
   }
 }));
