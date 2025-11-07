@@ -511,9 +511,9 @@
         placeholder="Example: A 40-year-old woman decides to restart her life...&#10;Exemplo: Uma mulher de 40 anos decide recomeçar a vida...&#10;Ejemplo: Una mujer de 40 años decide reiniciar su vida..."
         required
       ></textarea>
-      
+
       <div style="margin-top: 20px; display: flex; gap: 12px;">
-        <button class="btn btn-primary btn-full" onclick="submitInput()">
+        <button class="btn btn-primary btn-full" id="submitInputBtn">
           ✨ Generate Story Paths
         </button>
       </div>
@@ -549,10 +549,10 @@
       </div>
 
       <div style="margin-top: 20px; display: flex; gap: 12px;">
-        <button class="btn btn-secondary" onclick="goToStep(1)">
+        <button class="btn btn-secondary" id="backToStep1Btn">
           ← Back
         </button>
-        <button class="btn btn-primary btn-full" onclick="generateStory()">
+        <button class="btn btn-primary btn-full" id="generateStoryBtn">
           ✨ Generate 5 Lines
         </button>
       </div>
@@ -571,13 +571,13 @@
       <div class="story-lines" id="storyLines"></div>
 
       <div style="margin-top: 32px; display: flex; gap: 12px;">
-        <button class="btn btn-secondary" onclick="startOver()">
+        <button class="btn btn-secondary" id="startOverBtn">
           🔄 Start Over
         </button>
-        <button class="btn btn-primary" onclick="shareStory()">
+        <button class="btn btn-primary" id="shareStoryBtn">
           📤 Share Story
         </button>
-        <button class="btn btn-success btn-full" onclick="saveAndGoToHistory()">
+        <button class="btn btn-success btn-full" id="saveHistoryBtn">
           💾 Save & View History
         </button>
       </div>
@@ -621,76 +621,75 @@
         loadUsage();
 
         // ============================================
-        // CRITICAL: Add ALL button click handlers via addEventListener
-        // CSP blocks inline onclick handlers
+        // CRITICAL: Add ALL button click handlers via addEventListener (CSP compliant)
         // ============================================
-        console.log('Setting up ALL button click handlers for CSP compliance...');
+        console.log('Setting up button click handlers for CSP compliance...');
 
-        // Get all buttons with onclick (we'll attach proper listeners)
-        const buttons = document.querySelectorAll('button[onclick]');
-        console.log(`Found ${buttons.length} buttons with onclick attributes`);
+        // Step 1: Submit Input button
+        const submitInputBtn = document.getElementById('submitInputBtn');
+        if (submitInputBtn) {
+          submitInputBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Submit Input button clicked');
+            submitInput();
+          });
+          console.log('✓ Submit Input handler attached');
+        }
 
-        // Attach listeners to each button
-        buttons.forEach(button => {
-          const onclickAttr = button.getAttribute('onclick');
-          console.log('Processing button with onclick:', onclickAttr);
+        // Step 2: Back to Step 1 button
+        const backToStep1Btn = document.getElementById('backToStep1Btn');
+        if (backToStep1Btn) {
+          backToStep1Btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Back to Step 1 button clicked');
+            goToStep(1);
+          });
+          console.log('✓ Back to Step 1 handler attached');
+        }
 
-          // Extract function name and arguments from onclick attribute
-          if (onclickAttr.includes('submitInput()')) {
-            button.onclick = null;
-            button.addEventListener('click', function(e) {
-              e.preventDefault();
-              console.log('Submit Input button clicked via addEventListener');
-              submitInput();
-            });
-            console.log('✓ submitInput() handler attached');
+        // Step 2: Generate Story button
+        const generateStoryBtn = document.getElementById('generateStoryBtn');
+        if (generateStoryBtn) {
+          generateStoryBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Generate Story button clicked');
+            generateStory();
+          });
+          console.log('✓ Generate Story handler attached');
+        }
 
-          } else if (onclickAttr.includes('goToStep(1)')) {
-            button.onclick = null;
-            button.addEventListener('click', function(e) {
-              e.preventDefault();
-              console.log('Go to Step 1 button clicked');
-              goToStep(1);
-            });
-            console.log('✓ goToStep(1) handler attached');
+        // Step 3: Start Over button
+        const startOverBtn = document.getElementById('startOverBtn');
+        if (startOverBtn) {
+          startOverBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Start Over button clicked');
+            startOver();
+          });
+          console.log('✓ Start Over handler attached');
+        }
 
-          } else if (onclickAttr.includes('generateStory()')) {
-            button.onclick = null;
-            button.addEventListener('click', function(e) {
-              e.preventDefault();
-              console.log('Generate Story button clicked via addEventListener');
-              generateStory();
-            });
-            console.log('✓ generateStory() handler attached');
+        // Step 3: Share Story button
+        const shareStoryBtn = document.getElementById('shareStoryBtn');
+        if (shareStoryBtn) {
+          shareStoryBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Share Story button clicked');
+            shareStory();
+          });
+          console.log('✓ Share Story handler attached');
+        }
 
-          } else if (onclickAttr.includes('startOver()')) {
-            button.onclick = null;
-            button.addEventListener('click', function(e) {
-              e.preventDefault();
-              console.log('Start Over button clicked');
-              startOver();
-            });
-            console.log('✓ startOver() handler attached');
-
-          } else if (onclickAttr.includes('shareStory()')) {
-            button.onclick = null;
-            button.addEventListener('click', function(e) {
-              e.preventDefault();
-              console.log('Share Story button clicked');
-              shareStory();
-            });
-            console.log('✓ shareStory() handler attached');
-
-          } else if (onclickAttr.includes('saveAndGoToHistory()')) {
-            button.onclick = null;
-            button.addEventListener('click', function(e) {
-              e.preventDefault();
-              console.log('Save & Go to History button clicked');
-              saveAndGoToHistory();
-            });
-            console.log('✓ saveAndGoToHistory() handler attached');
-          }
-        });
+        // Step 3: Save & View History button
+        const saveHistoryBtn = document.getElementById('saveHistoryBtn');
+        if (saveHistoryBtn) {
+          saveHistoryBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Save & View History button clicked');
+            saveAndGoToHistory();
+          });
+          console.log('✓ Save & View History handler attached');
+        }
 
         console.log('All button handlers attached successfully!');
       } else {

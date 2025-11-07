@@ -453,7 +453,7 @@
           </li>
         </ul>
 
-        <button class="cta-button secondary" id="free-btn" onclick="handlePlanClick('free')">
+        <button class="cta-button secondary" id="free-btn">
           Get Started Free
         </button>
       </div>
@@ -493,7 +493,7 @@
           </li>
         </ul>
 
-        <button class="cta-button" id="pro-btn" onclick="handlePlanClick('pro')">
+        <button class="cta-button" id="pro-btn">
           Upgrade to Pro
         </button>
       </div>
@@ -530,7 +530,7 @@
           </li>
         </ul>
 
-        <button class="cta-button secondary" onclick="handlePlanClick('enterprise')">
+        <button class="cta-button secondary" id="enterprise-btn">
           Contact Sales
         </button>
       </div>
@@ -708,12 +708,12 @@
     // Load Clerk and initialize
     window.addEventListener("load", async function () {
       await window.Clerk.load();
-      
+
       const authLoading = document.getElementById('auth-loading');
       const mainContent = document.getElementById('main-content');
       const userButtonDiv = document.getElementById('user-button');
       const myStoriesLink = document.getElementById('my-stories-link');
-      
+
       // Mount user button if logged in
       if (window.Clerk.user) {
         window.Clerk.mountUserButton(userButtonDiv);
@@ -722,7 +722,23 @@
         // Hide My Stories link if not logged in
         myStoriesLink.style.display = 'none';
       }
-      
+
+      // Attach event listeners for pricing buttons (CSP compliant)
+      const freeBtn = document.getElementById('free-btn');
+      if (freeBtn) {
+        freeBtn.addEventListener('click', () => handlePlanClick('free'));
+      }
+
+      const proBtn = document.getElementById('pro-btn');
+      if (proBtn) {
+        proBtn.addEventListener('click', () => handlePlanClick('pro'));
+      }
+
+      const enterpriseBtn = document.getElementById('enterprise-btn');
+      if (enterpriseBtn) {
+        enterpriseBtn.addEventListener('click', () => handlePlanClick('enterprise'));
+      }
+
       // Show content
       authLoading.style.display = 'none';
       mainContent.classList.remove('hidden');

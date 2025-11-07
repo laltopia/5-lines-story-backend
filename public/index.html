@@ -276,14 +276,14 @@
         <p class="card-description">Paste or type content</p>
       </div>
 
-      <div class="card coming-soon" onclick="alert('Audio input coming soon!')">
+      <div class="card coming-soon" id="audioCard">
         <div class="card-icon">🎤</div>
         <h3 class="card-title">Audio</h3>
         <p class="card-description">Record your voice</p>
         <span class="badge">Coming Soon</span>
       </div>
 
-      <div class="card coming-soon" onclick="alert('Document upload coming soon!')">
+      <div class="card coming-soon" id="documentCard">
         <div class="card-icon">📄</div>
         <h3 class="card-title">Document</h3>
         <p class="card-description">Upload PDF, PPT, DOC</p>
@@ -391,6 +391,21 @@
             window.Clerk.openSignIn();
           };
           myStoriesLink.style.display = 'none';
+        }
+
+        // Attach event listeners for coming soon cards (CSP compliant)
+        const audioCard = document.getElementById('audioCard');
+        if (audioCard) {
+          audioCard.addEventListener('click', () => {
+            alert('Audio input coming soon!');
+          });
+        }
+
+        const documentCard = document.getElementById('documentCard');
+        if (documentCard) {
+          documentCard.addEventListener('click', () => {
+            alert('Document upload coming soon!');
+          });
         }
       } catch (error) {
         console.error('Error initializing:', error);
