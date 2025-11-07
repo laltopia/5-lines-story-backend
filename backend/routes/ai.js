@@ -10,6 +10,11 @@ const {
   estimateTokens
 } = require('../config/prompts');
 
+// Document parsing libraries
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
+
 // Inicializar cliente Anthropic
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -190,7 +195,9 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
     const {
       userInput,
       selectedPath,
-      customDescription
+      customDescription,
+      inputType,
+      originalFileInfo
     } = req.body;
 
     const userId = req.auth.userId;
@@ -258,12 +265,23 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
         user_id: userId,
         tokens_used: totalTokens,
         input_tokens: usage.input_tokens,
-        output_tokens: usage.output_tokens
+        output_tokens: usage.output_tokens,
+        input_type: inputType || 'text',
+        original_file_info: originalFileInfo || null
       }])
       .select()
       .single();
 
     if (convError) throw convError;
+
+    // Prepare metadata for usage tracking
+    const usageMetadata = originalFileInfo ? {
+      input_type: inputType,
+      file_name: originalFileInfo.fileName,
+      file_size: originalFileInfo.fileSize,
+      mime_type: originalFileInfo.mimeType,
+      extracted_length: originalFileInfo.extractedLength
+    } : null;
 
     await supabase.from('usage_tracking').insert([{
       user_id: userId,
@@ -272,7 +290,8 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
       input_tokens: usage.input_tokens,
       output_tokens: usage.output_tokens,
       cost_usd: costUsd,
-      conversation_id: conversationData.id
+      conversation_id: conversationData.id,
+      metadata: usageMetadata
     }]);
 
     await incrementStoryCount(userId);
@@ -608,5 +627,164 @@ router.patch('/update-story/:id', requireAuthentication, async (req, res) => {
     });
   }
 });
+
+// ============================================
+// DOCUMENT TEXT EXTRACTION
+// ============================================
+
+// Configure multer for document uploads
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+      'application/msword', // DOC
+      'text/plain' // TXT
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported file type. Please upload PDF, DOC, DOCX, or TXT'), false);
+    }
+  }
+});
+
+// Extract text from uploaded document
+router.post('/extract-text',
+  requireAuthentication,
+  documentUpload.single('document'),
+  async (req, res) => {
+    try {
+      const userId = req.auth.userId;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No document uploaded'
+        });
+      }
+
+      let extractedText = '';
+      const fileBuffer = req.file.buffer;
+      const mimeType = req.file.mimetype;
+      const fileName = req.file.originalname;
+
+      console.log(`Extracting text from ${fileName} (${mimeType}, ${req.file.size} bytes)`);
+
+      // Extract text based on file type
+      if (mimeType === 'application/pdf') {
+        // PDF extraction
+        try {
+          const pdfData = await pdfParse(fileBuffer);
+          extractedText = pdfData.text;
+          console.log(`PDF extraction successful: ${extractedText.length} characters`);
+        } catch (pdfError) {
+          console.error('PDF parsing error:', pdfError);
+          return res.status(400).json({
+            success: false,
+            error: 'Failed to parse PDF. The file may be corrupted or password-protected.'
+          });
+        }
+      }
+      else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        // DOCX extraction
+        try {
+          const result = await mammoth.extractRawText({ buffer: fileBuffer });
+          extractedText = result.value;
+          console.log(`DOCX extraction successful: ${extractedText.length} characters`);
+        } catch (docxError) {
+          console.error('DOCX parsing error:', docxError);
+          return res.status(400).json({
+            success: false,
+            error: 'Failed to parse DOCX. The file may be corrupted.'
+          });
+        }
+      }
+      else if (mimeType === 'text/plain') {
+        // Plain text
+        extractedText = fileBuffer.toString('utf-8');
+        console.log(`TXT extraction successful: ${extractedText.length} characters`);
+      }
+      else {
+        // Fallback for DOC (older format) - best effort
+        try {
+          extractedText = fileBuffer.toString('utf-8');
+          console.log(`Fallback text extraction: ${extractedText.length} characters`);
+        } catch (fallbackError) {
+          return res.status(400).json({
+            success: false,
+            error: 'Failed to extract text from document. Please try a different format.'
+          });
+        }
+      }
+
+      // Clean up extracted text
+      extractedText = extractedText
+        .trim()
+        .replace(/\n{3,}/g, '\n\n') // Remove excessive newlines
+        .replace(/\s{2,}/g, ' '); // Remove excessive spaces
+
+      // Check if extraction was successful
+      if (!extractedText || extractedText.length < 10) {
+        return res.status(400).json({
+          success: false,
+          error: 'Could not extract text from document. File may be empty, corrupted, or contain only images.'
+        });
+      }
+
+      // Limit text length (Claude has token limits)
+      const maxLength = 50000; // ~12,500 tokens
+      let wasTruncated = false;
+      if (extractedText.length > maxLength) {
+        extractedText = extractedText.substring(0, maxLength);
+        wasTruncated = true;
+      }
+
+      // Track document extraction usage
+      await supabase.from('usage_tracking').insert([{
+        user_id: userId,
+        prompt_type: 'document_extraction',
+        tokens_used: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        cost_usd: 0, // Free
+        conversation_id: null,
+        metadata: {
+          file_name: fileName,
+          file_size: req.file.size,
+          mime_type: mimeType,
+          extracted_length: extractedText.length,
+          was_truncated: wasTruncated
+        }
+      }]);
+
+      console.log(`Successfully extracted ${extractedText.length} characters from ${fileName}`);
+
+      res.json({
+        success: true,
+        text: extractedText,
+        metadata: {
+          fileName: fileName,
+          fileSize: req.file.size,
+          mimeType: mimeType,
+          extractedLength: extractedText.length,
+          wasTruncated: wasTruncated
+        }
+      });
+
+    } catch (error) {
+      console.error('Text extraction error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to extract text from document. Please try again.'
+      });
+    }
+  }
+);
 
 module.exports = router;

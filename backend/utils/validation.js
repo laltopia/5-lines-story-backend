@@ -66,7 +66,17 @@ const aiSchemas = {
     }).allow(null),
     customDescription: Joi.string()
       .max(1000)
-      .allow(null, '')
+      .allow(null, ''),
+    inputType: Joi.string()
+      .valid('text', 'audio', 'document')
+      .default('text')
+      .optional(),
+    originalFileInfo: Joi.object({
+      fileName: Joi.string().max(255),
+      fileSize: Joi.number().integer().positive(),
+      mimeType: Joi.string().max(100),
+      extractedLength: Joi.number().integer()
+    }).allow(null).optional()
   }),
 
   refineLine: Joi.object({
