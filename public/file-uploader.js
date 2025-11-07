@@ -163,3 +163,6 @@ class FileUploader {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = FileUploader;
 }
+
+// Log that FileUploader is loaded
+console.log('FileUploader class loaded successfully');
