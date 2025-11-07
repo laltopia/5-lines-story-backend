@@ -33,6 +33,187 @@ let appState = {
 };
 
 // ============================================
+// NOTIFICATIONS & ERROR HANDLING
+// ============================================
+
+/**
+ * Show success notification
+ */
+function showNotification(message, type = 'success') {
+  const notification = document.createElement('div');
+  const colors = {
+    success: '#10b981',
+    error: '#ef4444',
+    info: '#6366f1'
+  };
+
+  notification.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: ${colors[type] || colors.success};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+    max-width: 400px;
+    font-size: 15px;
+    line-height: 1.5;
+  `;
+  notification.textContent = message;
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-out';
+    setTimeout(() => notification.remove(), 300);
+  }, type === 'error' ? 5000 : 3000);
+}
+
+/**
+ * Handle API errors with user-friendly messages
+ */
+function handleApiError(error, context = 'Operation') {
+  console.error(`Error in ${context}:`, error);
+
+  // Check if offline
+  if (!navigator.onLine) {
+    return 'You appear to be offline. Please check your internet connection and try again.';
+  }
+
+  // Rate limit errors
+  if (error.status === 429 || error.message?.includes('429')) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+
+  // Authentication errors
+  if (error.status === 401 || error.message?.includes('401')) {
+    return 'Your session has expired. Please refresh the page and sign in again.';
+  }
+
+  // Server errors
+  if (error.status >= 500) {
+    return 'Our servers are experiencing issues. Please try again in a moment.';
+  }
+
+  // Network errors
+  if (error.message?.includes('fetch') || error.message?.includes('network')) {
+    return 'Network error. Please check your connection and try again.';
+  }
+
+  // Default error message
+  return error.message || 'Something went wrong. Please try again.';
+}
+
+/**
+ * Fetch with retry logic and better error handling
+ */
+async function fetchWithRetry(url, options = {}, maxRetries = 2) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // If successful, return response
+      if (response.ok) {
+        return response;
+      }
+
+      // Don't retry client errors (except 429 rate limit)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        const error = new Error(`Request failed with status ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      // For 500s or 429, retry with exponential backoff
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s
+        console.log(`Retrying after ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Final attempt failed
+      const error = new Error(`Request failed with status ${response.status}`);
+      error.status = response.status;
+      throw error;
+
+    } catch (err) {
+      // Network error - retry if attempts remaining
+      if (attempt < maxRetries && (err.message?.includes('fetch') || err.message?.includes('network'))) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Network error, retrying after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // No more retries or non-retryable error
+      throw err;
+    }
+  }
+}
+
+/**
+ * Update button loading state
+ */
+function setButtonLoading(buttonId, isLoading, originalText = null) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+
+  if (isLoading) {
+    button.disabled = true;
+    button.dataset.originalText = button.innerHTML;
+    button.innerHTML = `
+      <svg style="width: 20px; height: 20px; animation: spin 1s linear infinite;" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span style="margin-left: 8px;">${originalText || 'Loading...'}</span>
+    `;
+  } else {
+    button.disabled = false;
+    if (button.dataset.originalText) {
+      button.innerHTML = button.dataset.originalText;
+    }
+  }
+}
+
+// Add spin animation
+if (!document.getElementById('loading-animations')) {
+  const style = document.createElement('style');
+  style.id = 'loading-animations';
+  style.textContent = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// ============================================
 // CARREGAR USO
 // ============================================
 async function loadUsage() {
@@ -95,12 +276,12 @@ async function submitInput() {
   console.log('submitInput called, input length:', input.length);
 
   if (!input) {
-    alert('Please enter your story idea');
+    showNotification('Please enter your story idea', 'error');
     return;
   }
 
   if (input.length < 10) {
-    alert('Please enter at least 10 characters for your story idea');
+    showNotification('Please enter at least 10 characters for your story idea', 'error');
     return;
   }
 
@@ -108,8 +289,14 @@ async function submitInput() {
   appState.userInput = input;
   goToStep(2);
 
-  document.getElementById('loading1').classList.remove('hidden');
+  // Show loading state
+  const loadingEl = document.getElementById('loading1');
+  loadingEl.classList.remove('hidden');
+  loadingEl.querySelector('p').textContent = 'AI is analyzing your idea and generating story paths...';
   document.getElementById('pathsGrid').innerHTML = '';
+
+  // Disable submit button
+  setButtonLoading('submitInputBtn', true, 'Analyzing...');
 
   try {
     console.log('Getting Clerk token...');
@@ -117,7 +304,7 @@ async function submitInput() {
     console.log('Token obtained:', token ? 'YES' : 'NO');
 
     console.log('Sending request to /api/ai/suggest-paths');
-    const response = await fetch('/api/ai/suggest-paths', {
+    const response = await fetchWithRetry('/api/ai/suggest-paths', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -130,26 +317,32 @@ async function submitInput() {
     const data = await response.json();
     console.log('Response data:', data);
 
-    document.getElementById('loading1').classList.add('hidden');
+    loadingEl.classList.add('hidden');
+    setButtonLoading('submitInputBtn', false);
 
     if (data.success) {
       console.log('Success! Paths:', data.paths);
       appState.suggestedPaths = data.paths;
       renderPaths(data.paths);
       await loadUsage();
+      showNotification('3 story paths generated! Choose one or describe your own.', 'success');
     } else if (data.error === 'Limit reached') {
       console.error('Limit reached:', data.message);
-      alert(data.message);
+      showNotification(data.message, 'error');
       goToStep(1);
     } else {
       console.error('Error from server:', data.error, data.details);
-      alert('Error generating paths: ' + data.error + (data.details ? '\n\nDetails: ' + JSON.stringify(data.details) : ''));
+      const errorMsg = data.error || 'Error generating paths';
+      showNotification(errorMsg, 'error');
       goToStep(1);
     }
   } catch (error) {
-    document.getElementById('loading1').classList.add('hidden');
+    loadingEl.classList.add('hidden');
+    setButtonLoading('submitInputBtn', false);
     console.error('Exception in submitInput:', error);
-    alert('Error connecting to server: ' + error.message);
+
+    const errorMessage = handleApiError(error, 'generating story paths');
+    showNotification(errorMessage, 'error');
     goToStep(1);
   }
 }
@@ -223,26 +416,32 @@ function selectPath(index) {
 // ============================================
 async function generateStory() {
   const customPath = document.getElementById('customPath').value.trim();
-  
+
   if (!appState.selectedPath && !customPath) {
-    alert('Please select a path or describe your own');
+    showNotification('Please select a path or describe your own', 'error');
     return;
   }
-  
+
   if (customPath) {
     appState.customPath = customPath;
     appState.selectedPath = null;
   }
-  
+
   goToStep(3);
-  
-  document.getElementById('loading2').classList.remove('hidden');
+
+  // Show loading state with progress message
+  const loadingEl = document.getElementById('loading2');
+  loadingEl.classList.remove('hidden');
+  loadingEl.querySelector('p').textContent = 'AI is crafting your 5-line story... This may take 10-15 seconds.';
   document.getElementById('storyLines').innerHTML = '';
-  
+
+  // Disable generate button
+  setButtonLoading('generateStoryBtn', true, 'Generating Story...');
+
   try {
     const token = await window.Clerk.session.getToken();
-    
-    const response = await fetch('/api/ai/generate-story', {
+
+    const response = await fetchWithRetry('/api/ai/generate-story', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -254,30 +453,35 @@ async function generateStory() {
         customDescription: appState.customPath || null
       })
     });
-    
+
     const data = await response.json();
-    
-    document.getElementById('loading2').classList.add('hidden');
-    
+
+    loadingEl.classList.add('hidden');
+    setButtonLoading('generateStoryBtn', false);
+
     if (data.success) {
       appState.currentStory = data.story;
       appState.conversationId = data.conversationId;
       renderStory(data.story);
       await loadUsage();
-      
-      // Mostrar notificação de sucesso
-      showNotification('✨ Story created successfully! You can edit any line or save it.');
+
+      // Show success notification
+      showNotification('Story created successfully! You can edit any line or save it.', 'success');
     } else if (data.error === 'Limit reached') {
-      alert(data.message);
+      showNotification(data.message, 'error');
       goToStep(2);
     } else {
-      alert('Error generating story: ' + data.error);
+      const errorMsg = data.error || 'Error generating story';
+      showNotification(errorMsg, 'error');
       goToStep(2);
     }
   } catch (error) {
-    document.getElementById('loading2').classList.add('hidden');
+    loadingEl.classList.add('hidden');
+    setButtonLoading('generateStoryBtn', false);
     console.error('Error:', error);
-    alert('Error connecting to server');
+
+    const errorMessage = handleApiError(error, 'generating story');
+    showNotification(errorMessage, 'error');
     goToStep(2);
   }
 }
@@ -518,27 +722,39 @@ async function saveEditDirectly(showNotif = true) {
 // ============================================
 async function saveEditWithAI() {
   if (!appState.editingLine) return;
-  
+
   const lineNumber = appState.editingLine;
   const textarea = document.getElementById(`edit-textarea-${lineNumber}`);
-  
+
   if (!textarea) return;
-  
+
   const newText = textarea.value.trim();
-  
+
   if (!newText) {
-    alert('Please enter your suggestion');
+    showNotification('Please enter your suggestion for the AI', 'error');
     return;
   }
-  
-  // Mostrar loading
+
+  // Disable refine button
+  const refineBtn = document.getElementById(`refine-ai-btn-${lineNumber}`);
+  if (refineBtn) {
+    refineBtn.disabled = true;
+    refineBtn.textContent = 'Refining...';
+  }
+
+  // Show loading state
   const lineElement = document.getElementById(`line-content-${lineNumber}`);
-  lineElement.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner"></div><p>Refining with AI...</p></div>';
-  
+  lineElement.innerHTML = `
+    <div style="text-align: center; padding: 20px;">
+      <div class="spinner"></div>
+      <p style="margin-top: 12px; color: var(--text-secondary);">AI is refining your line... This may take a moment.</p>
+    </div>
+  `;
+
   try {
     const token = await window.Clerk.session.getToken();
-    
-    const response = await fetch('/api/ai/refine-line', {
+
+    const response = await fetchWithRetry('/api/ai/refine-line', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -551,26 +767,33 @@ async function saveEditWithAI() {
         conversationId: appState.conversationId
       })
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       appState.currentStory = data.story;
-      
-      // Limpar estado de edição ANTES de re-renderizar
+
+      // Clear edit state BEFORE re-rendering
       appState.editingLine = null;
       appState.editingOriginalContent = null;
-      
+
       renderStory(data.story);
-      showNotification(`Line ${lineNumber} refined! ${data.explanation}`);
+
+      // Show success with explanation
+      const explanation = data.explanation ? ` ${data.explanation}` : '';
+      showNotification(`Line ${lineNumber} refined!${explanation}`, 'success');
+
       await loadUsage();
     } else {
-      alert('Error refining line: ' + data.error);
+      const errorMsg = data.error || 'Error refining line';
+      showNotification(errorMsg, 'error');
       cancelEdit();
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('Error connecting to server: ' + error.message);
+
+    const errorMessage = handleApiError(error, 'refining line');
+    showNotification(errorMessage, 'error');
     cancelEdit();
   }
 }
@@ -580,71 +803,18 @@ async function saveEditWithAI() {
 // ============================================
 async function saveAndGoToHistory() {
   if (!appState.conversationId) {
-    alert('No story to save!');
+    showNotification('No story to save yet. Please create a story first.', 'error');
     return;
   }
-  
-  // A história já foi salva automaticamente quando foi criada
-  // Apenas mostrar mensagem e redirecionar
-  showNotification('💾 Story saved! Redirecting to history...', 2000);
-  
+
+  // Story is automatically saved when created
+  // Just show message and redirect
+  showNotification('Story saved! Redirecting to history...', 'success');
+
   setTimeout(() => {
     window.location.href = '/history.html';
-  }, 2000);
+  }, 1500);
 }
-
-// ============================================
-// NOTIFICAÇÃO
-// ============================================
-function showNotification(message, duration = 3000) {
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    background: #10b981;
-    color: white;
-    padding: 16px 24px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 1000;
-    animation: slideIn 0.3s ease-out;
-  `;
-  notification.textContent = message;
-  
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease-out';
-    setTimeout(() => notification.remove(), 300);
-  }, duration);
-}
-
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(400px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
-  @keyframes slideOut {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(400px);
-      opacity: 0;
-    }
-  }
-`;
-document.head.appendChild(style);
 
 // ============================================
 // START OVER
