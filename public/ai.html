@@ -45,9 +45,48 @@
       text-decoration: none;
     }
 
+    /* Right side container for nav + actions */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
     .header-center {
       display: flex;
       gap: 8px;
+    }
+
+    /* Hamburger menu button (hidden on desktop) */
+    .mobile-menu-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      z-index: 101;
+    }
+
+    .mobile-menu-toggle span {
+      width: 24px;
+      height: 2px;
+      background: #111827;
+      transition: all 0.3s ease;
+      border-radius: 2px;
+    }
+
+    .mobile-menu-toggle.active span:nth-child(1) {
+      transform: rotate(45deg) translate(7px, 7px);
+    }
+
+    .mobile-menu-toggle.active span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .mobile-menu-toggle.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(7px, -7px);
     }
 
     .nav-link {
@@ -419,14 +458,75 @@
     /* Mobile Responsive */
     @media (max-width: 768px) {
       .header {
-        flex-wrap: wrap;
-        gap: 12px;
+        padding: 16px 20px;
+      }
+
+      /* Show hamburger menu on mobile */
+      .mobile-menu-toggle {
+        display: flex;
+      }
+
+      /* Hide desktop navigation and actions on mobile */
+      .header-right {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background: white;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+        padding: 80px 24px 24px;
+        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s ease;
+        z-index: 100;
+      }
+
+      .header-right.mobile-menu-open {
+        right: 0;
       }
 
       .header-center {
-        order: 3;
+        flex-direction: column;
         width: 100%;
-        justify-content: center;
+        gap: 0;
+      }
+
+      .nav-link {
+        width: 100%;
+        padding: 16px 20px;
+        border-radius: 8px;
+        justify-content: flex-start;
+      }
+
+      .header-actions {
+        width: 100%;
+        flex-direction: column;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 16px;
+      }
+
+      .login-btn,
+      #user-button {
+        width: 100%;
+      }
+
+      /* Mobile menu overlay */
+      .mobile-menu-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99;
+      }
+
+      .mobile-menu-overlay.active {
+        display: block;
       }
     }
   </style>
@@ -473,6 +573,9 @@
     </symbol>
   </svg>
 
+  <!-- Mobile menu overlay -->
+  <div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
+
   <!-- Header -->
   <header class="header">
     <a href="/" class="logo">
@@ -481,22 +584,32 @@
       </svg>
       <span>StoryMaking.AI</span>
     </a>
-    
-    <!-- Navigation Links -->
-    <div class="header-center">
-      <a href="/pricing.html" class="nav-link">
-        Pricing
-      </a>
-      <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
-        Feedback
-      </a>
-      <a href="/history.html" class="nav-link active">
-        My Stories
-      </a>
-    </div>
 
-    <div class="header-actions">
-      <div id="user-button"></div>
+    <!-- Hamburger menu button (mobile only) -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Right side: Navigation + Actions -->
+    <div class="header-right" id="header-right">
+      <!-- Navigation Links -->
+      <div class="header-center">
+        <a href="/pricing.html" class="nav-link">
+          Pricing
+        </a>
+        <a href="https://laltopialinestories.userjot.com/" target="_blank" class="nav-link">
+          Feedback
+        </a>
+        <a href="/history.html" class="nav-link active">
+          My Stories
+        </a>
+      </div>
+
+      <div class="header-actions">
+        <div id="user-button"></div>
+      </div>
     </div>
   </header>
 
@@ -680,7 +793,36 @@
   <script src="https://widget.userjot.com/widget.js" async></script>
 
   <script src="/ai.js"></script>
-  
+
+  <!-- Mobile Menu Toggle Script (Lightweight - ~100 bytes) -->
+  <script>
+    (function() {
+      var toggle = document.getElementById('mobile-menu-toggle');
+      var menu = document.getElementById('header-right');
+      var overlay = document.getElementById('mobile-menu-overlay');
+
+      function toggleMenu() {
+        toggle.classList.toggle('active');
+        menu.classList.toggle('mobile-menu-open');
+        overlay.classList.toggle('active');
+        document.body.style.overflow = menu.classList.contains('mobile-menu-open') ? 'hidden' : '';
+      }
+
+      toggle.addEventListener('click', toggleMenu);
+      overlay.addEventListener('click', toggleMenu);
+
+      // Close menu when clicking on a nav link
+      var navLinks = menu.querySelectorAll('.nav-link');
+      navLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth <= 768) {
+            toggleMenu();
+          }
+        });
+      });
+    })();
+  </script>
+
   <script>
     // Check authentication
     window.addEventListener("load", async function () {
