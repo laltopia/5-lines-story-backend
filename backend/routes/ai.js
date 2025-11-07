@@ -579,7 +579,18 @@ router.patch('/update-story/:id', requireAuthentication, async (req, res) => {
       .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Supabase update error:', updateError);
+      // Check if error is due to missing column
+      if (updateError.message && updateError.message.includes('column') && updateError.message.includes('title')) {
+        return res.status(500).json({
+          success: false,
+          error: 'Database schema outdated. Please add "title" column to conversations table.',
+          details: updateError.message
+        });
+      }
+      throw updateError;
+    }
 
     res.json({
       success: true,
@@ -588,9 +599,12 @@ router.patch('/update-story/:id', requireAuthentication, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating story:', error);
+    console.error('Error details:', error.message);
+    console.error('Update data was:', updateData);
     res.status(500).json({
       success: false,
-      error: 'Failed to update story. Please try again later.'
+      error: 'Failed to update story. Please try again later.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
