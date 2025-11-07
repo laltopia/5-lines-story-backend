@@ -680,7 +680,7 @@ function shareStory() {
     .map(([key, value], index) => `${index + 1}. ${value}`)
     .join('\n\n');
   
-  const fullText = `My 5 Lines Story:\n\n${storyText}\n\nCreated with 5 Lines Story ✨`;
+  const fullText = `My Story:\n\n${storyText}\n\nCreated with StoryMaking.AI`;
   
   navigator.clipboard.writeText(fullText).then(() => {
     showNotification('Story copied to clipboard! 📋');

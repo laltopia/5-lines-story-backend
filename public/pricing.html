@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pricing - 5 Lines Story</title>
-  
+  <title>Pricing - StoryMaking.AI</title>
+  <link rel="stylesheet" href="/design-system.css">
+
   <style>
     * {
       margin: 0;
@@ -376,11 +377,21 @@
   </style>
 </head>
 <body>
+  <!-- SVG Icons -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3L14 10L21 12L14 14L12 21L10 14L3 12L10 10L12 3Z"/>
+      <path d="M5 5L6 8L9 9L6 10L5 15L4 10L1 9L4 8L5 5Z"/>
+    </symbol>
+  </svg>
+
   <!-- Header -->
   <header class="header">
     <a href="/" class="logo">
-      <span style="font-size: 28px;">✨</span>
-      <span>5 Lines Story</span>
+      <svg class="icon icon-lg" style="color: var(--purple-primary); width: 28px; height: 28px;">
+        <use href="#icon-sparkles"></use>
+      </svg>
+      <span>StoryMaking.AI</span>
     </a>
 
     <!-- Navigation Links -->
@@ -427,7 +438,7 @@
       <!-- Free Plan -->
       <div class="pricing-card" id="free-card">
         <div class="plan-name">Free</div>
-        <div class="plan-description">Perfect for trying out 5 Lines Story</div>
+        <div class="plan-description">Perfect for trying out StoryMaking.AI</div>
         
         <div class="plan-price">
           <span class="price-amount">$0</span>
@@ -626,7 +637,7 @@
         }
       } else if (plan === 'enterprise') {
         // Open email client
-        window.location.href = 'mailto:sales@5linesstory.com?subject=Enterprise Plan Inquiry&body=Hi, I am interested in the Enterprise plan for 5 Lines Story.';
+        window.location.href = 'mailto:sales@storymaking.ai?subject=Enterprise Plan Inquiry&body=Hi, I am interested in the Enterprise plan for StoryMaking.AI.';
       }
     }
 

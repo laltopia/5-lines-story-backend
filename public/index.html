@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>5 Lines Story - Transform Ideas into Compelling Stories</title>
-  
+  <title>StoryMaking.AI - Transform Ideas into Compelling Stories</title>
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="/design-system.css">
+
   <style>
     * {
       margin: 0;
@@ -240,10 +243,33 @@
   </style>
 </head>
 <body>
+  <!-- SVG Icon Library -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M8.757 15.243l-2.121 2.121m12.728 0l-2.121-2.121M8.757 8.757L6.636 6.636"/>
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </symbol>
+    <symbol id="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/>
+      <line x1="8" y1="23" x2="16" y2="23"/>
+    </symbol>
+    <symbol id="icon-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+      <polyline points="13 2 13 9 20 9"/>
+    </symbol>
+  </svg>
+
   <header class="header">
     <a href="/" class="logo">
-      <span class="logo-icon">✨</span>
-      <span>5 Lines Story</span>
+      <svg class="icon icon-lg" style="color: var(--purple-primary);">
+        <use href="#icon-sparkles"></use>
+      </svg>
+      <span>StoryMaking.AI</span>
     </a>
 
     <!-- Navigation Links -->
@@ -271,20 +297,32 @@
 
     <div class="cards-container">
       <div class="card" id="text-card">
-        <div class="card-icon">📝</div>
+        <div class="card-icon">
+          <svg class="icon icon-xl" style="color: var(--purple-primary);">
+            <use href="#icon-book"></use>
+          </svg>
+        </div>
         <h3 class="card-title">Text</h3>
         <p class="card-description">Paste or type content</p>
       </div>
 
       <div class="card coming-soon" id="audioCard">
-        <div class="card-icon">🎤</div>
+        <div class="card-icon">
+          <svg class="icon icon-xl" style="color: var(--text-secondary);">
+            <use href="#icon-mic"></use>
+          </svg>
+        </div>
         <h3 class="card-title">Audio</h3>
         <p class="card-description">Record your voice</p>
         <span class="badge">Coming Soon</span>
       </div>
 
       <div class="card coming-soon" id="documentCard">
-        <div class="card-icon">📄</div>
+        <div class="card-icon">
+          <svg class="icon icon-xl" style="color: var(--text-secondary);">
+            <use href="#icon-file"></use>
+          </svg>
+        </div>
         <h3 class="card-title">Document</h3>
         <p class="card-description">Upload PDF, PPT, DOC</p>
         <span class="badge">Coming Soon</span>
