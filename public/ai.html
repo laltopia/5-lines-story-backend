@@ -866,21 +866,22 @@
               console.log('Document metadata loaded:', window.documentUploadMetadata);
             }
 
-            // Show success notification
-            const inputStep = document.getElementById('inputStep');
-            const notification = document.createElement('div');
-            notification.style.cssText = 'margin-bottom: 16px; padding: 12px 16px; background: #d1fae5; border: 1px solid #10b981; border-radius: 12px; color: #065f46;';
-            notification.innerHTML = `
-              <strong>✓ Document loaded successfully!</strong><br>
-              <span style="font-size: 14px;">${window.documentUploadMetadata ? window.documentUploadMetadata.fileName : 'Document'} - ${documentText.length.toLocaleString()} characters extracted</span>
-            `;
-            inputStep.insertBefore(notification, inputStep.firstChild);
-
             // Clear sessionStorage to prevent reuse
             sessionStorage.removeItem('documentText');
             sessionStorage.removeItem('documentMetadata');
 
             console.log('Document text loaded and sessionStorage cleared');
+
+            // Automatically generate story paths for documents
+            // Wait a bit to ensure submitInput function is available
+            setTimeout(() => {
+              if (typeof submitInput === 'function') {
+                console.log('Auto-generating story paths from document...');
+                submitInput();
+              } else {
+                console.error('submitInput function not available');
+              }
+            }, 100);
           }
         }
 
