@@ -78,6 +78,9 @@ function renderStories(stories) {
       year: 'numeric'
     });
 
+    // Get title or fallback to first 50 chars of first line
+    const title = story.title || Object.values(aiResponse)[0]?.substring(0, 50) + '...' || 'Untitled Story';
+
     return `
       <div class="story-card" data-story-id="${story.id}">
         <div class="story-header">
@@ -90,6 +93,12 @@ function renderStories(stories) {
               🗑️
             </button>
           </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0; line-height: 1.4;">
+            ${escapeHtml(title)}
+          </h3>
         </div>
 
         <div class="story-preview">
@@ -182,7 +191,7 @@ function filterStories() {
 }
 
 // ============================================
-// ABRIR MODAL COM HISTÓRIA COMPLETA (XSS PROTECTED)
+// ABRIR MODAL COM HISTÓRIA COMPLETA (XSS PROTECTED + EDITABLE)
 // ============================================
 function openStoryModal(storyId) {
   const story = appState.stories.find(s => s.id === storyId);
@@ -207,10 +216,39 @@ function openStoryModal(storyId) {
     'Result / Transformation'
   ];
 
+  // Get title or fallback
+  const title = story.title || Object.values(aiResponse)[0]?.substring(0, 50) + '...' || 'Untitled Story';
+
   document.getElementById('modalTitle').textContent = `Story from ${date}`;
 
   const modalBody = document.getElementById('modalBody');
   modalBody.innerHTML = `
+    <!-- Title Section (Editable) -->
+    <div style="margin-bottom: 24px;">
+      <div style="font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Story Title</span>
+        <button class="icon-btn" id="editTitleBtn" title="Edit title" style="width: 28px; height: 28px; font-size: 14px;">
+          ✏️
+        </button>
+      </div>
+      <div id="titleDisplay" style="font-size: 20px; font-weight: 600; color: #111827; padding: 12px; background: #f9fafb; border-radius: 12px; cursor: pointer;">
+        ${escapeHtml(title)}
+      </div>
+      <div id="titleEdit" class="hidden">
+        <input
+          type="text"
+          id="titleInput"
+          value="${escapeHtml(title)}"
+          style="width: 100%; padding: 12px; border: 2px solid #6366f1; border-radius: 12px; font-size: 18px; font-weight: 600; font-family: inherit;"
+        />
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button class="btn btn-secondary" id="cancelTitleBtn" style="padding: 8px 16px;">Cancel</button>
+          <button class="btn btn-primary" id="saveTitleBtn" style="padding: 8px 16px;">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Original Input -->
     <div style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
       <div style="font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;">
         Original Input
@@ -220,18 +258,231 @@ function openStoryModal(storyId) {
       </div>
     </div>
 
+    <!-- Story Lines (Editable) -->
     ${Object.entries(aiResponse).map(([key, value], index) => `
-      <div class="modal-story-line">
+      <div class="modal-story-line" data-line-number="${index + 1}">
         <div class="modal-line-label">
           <div class="line-number">${index + 1}</div>
           <span>${escapeHtml(lineLabels[index])}</span>
+          <button class="icon-btn edit-line-btn" data-line="${index + 1}" title="Edit line" style="width: 28px; height: 28px; font-size: 14px; margin-left: auto;">
+            ✏️
+          </button>
         </div>
-        <div class="modal-line-content">${escapeHtml(value)}</div>
+        <div class="modal-line-content editable-line" id="lineDisplay-${index + 1}" data-line="${index + 1}">
+          ${escapeHtml(value)}
+        </div>
+        <div id="lineEdit-${index + 1}" class="hidden">
+          <textarea
+            id="lineTextarea-${index + 1}"
+            style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #6366f1; border-radius: 12px; font-size: 16px; font-family: inherit; resize: vertical;"
+          >${escapeHtml(value)}</textarea>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button class="btn btn-secondary cancel-line-btn" data-line="${index + 1}" style="padding: 8px 16px;">Cancel</button>
+            <button class="btn btn-primary save-line-btn" data-line="${index + 1}" style="padding: 8px 16px;">Save</button>
+          </div>
+        </div>
       </div>
     `).join('')}
   `;
 
+  // Attach event listeners for editing
+  attachModalEditListeners();
+
   document.getElementById('storyModal').classList.add('active');
+}
+
+// ============================================
+// ATTACH MODAL EDIT LISTENERS (CSP COMPLIANT)
+// ============================================
+function attachModalEditListeners() {
+  // Title editing
+  const editTitleBtn = document.getElementById('editTitleBtn');
+  const titleDisplay = document.getElementById('titleDisplay');
+  const cancelTitleBtn = document.getElementById('cancelTitleBtn');
+  const saveTitleBtn = document.getElementById('saveTitleBtn');
+
+  if (editTitleBtn) {
+    editTitleBtn.addEventListener('click', () => {
+      document.getElementById('titleDisplay').classList.add('hidden');
+      document.getElementById('titleEdit').classList.remove('hidden');
+      document.getElementById('titleInput').focus();
+    });
+  }
+
+  if (titleDisplay) {
+    titleDisplay.addEventListener('click', () => {
+      document.getElementById('titleDisplay').classList.add('hidden');
+      document.getElementById('titleEdit').classList.remove('hidden');
+      document.getElementById('titleInput').focus();
+    });
+  }
+
+  if (cancelTitleBtn) {
+    cancelTitleBtn.addEventListener('click', () => {
+      document.getElementById('titleDisplay').classList.remove('hidden');
+      document.getElementById('titleEdit').classList.add('hidden');
+    });
+  }
+
+  if (saveTitleBtn) {
+    saveTitleBtn.addEventListener('click', () => saveTitle());
+  }
+
+  // Line editing (event delegation for all edit buttons)
+  const editLineBtns = document.querySelectorAll('.edit-line-btn');
+  editLineBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineNumber = e.target.dataset.line;
+      startEditLine(lineNumber);
+    });
+  });
+
+  const cancelLineBtns = document.querySelectorAll('.cancel-line-btn');
+  cancelLineBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineNumber = e.target.dataset.line;
+      cancelEditLine(lineNumber);
+    });
+  });
+
+  const saveLineBtns = document.querySelectorAll('.save-line-btn');
+  saveLineBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineNumber = e.target.dataset.line;
+      saveLine(lineNumber);
+    });
+  });
+
+  console.log('Modal edit listeners attached');
+}
+
+// ============================================
+// SAVE TITLE
+// ============================================
+async function saveTitle() {
+  const newTitle = document.getElementById('titleInput').value.trim();
+
+  if (!newTitle) {
+    alert('Title cannot be empty');
+    return;
+  }
+
+  if (!appState.currentStory) return;
+
+  try {
+    const token = await window.Clerk.session.getToken();
+
+    const response = await fetch(`/api/ai/update-story/${appState.currentStory.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ title: newTitle })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update local state
+      appState.currentStory.title = newTitle;
+      const storyIndex = appState.stories.findIndex(s => s.id === appState.currentStory.id);
+      if (storyIndex !== -1) {
+        appState.stories[storyIndex].title = newTitle;
+      }
+
+      // Update display
+      document.getElementById('titleDisplay').textContent = newTitle;
+      document.getElementById('titleDisplay').classList.remove('hidden');
+      document.getElementById('titleEdit').classList.add('hidden');
+
+      // Refresh the cards to show new title
+      renderStories(appState.filteredStories);
+
+      showNotification('Title updated! ✓');
+    } else {
+      alert('Error updating title: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error updating title');
+  }
+}
+
+// ============================================
+// START EDIT LINE
+// ============================================
+function startEditLine(lineNumber) {
+  document.getElementById(`lineDisplay-${lineNumber}`).classList.add('hidden');
+  document.getElementById(`lineEdit-${lineNumber}`).classList.remove('hidden');
+  document.getElementById(`lineTextarea-${lineNumber}`).focus();
+}
+
+// ============================================
+// CANCEL EDIT LINE
+// ============================================
+function cancelEditLine(lineNumber) {
+  document.getElementById(`lineDisplay-${lineNumber}`).classList.remove('hidden');
+  document.getElementById(`lineEdit-${lineNumber}`).classList.add('hidden');
+}
+
+// ============================================
+// SAVE LINE
+// ============================================
+async function saveLine(lineNumber) {
+  const newText = document.getElementById(`lineTextarea-${lineNumber}`).value.trim();
+
+  if (!newText) {
+    alert('Line cannot be empty');
+    return;
+  }
+
+  if (!appState.currentStory) return;
+
+  try {
+    const token = await window.Clerk.session.getToken();
+
+    // Update story object
+    const aiResponse = JSON.parse(appState.currentStory.ai_response);
+    aiResponse[`line${lineNumber}`] = newText;
+
+    const response = await fetch(`/api/ai/update-story/${appState.currentStory.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        ai_response: JSON.stringify(aiResponse)
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update local state
+      appState.currentStory.ai_response = JSON.stringify(aiResponse);
+      const storyIndex = appState.stories.findIndex(s => s.id === appState.currentStory.id);
+      if (storyIndex !== -1) {
+        appState.stories[storyIndex].ai_response = JSON.stringify(aiResponse);
+      }
+
+      // Update display
+      document.getElementById(`lineDisplay-${lineNumber}`).textContent = newText;
+      document.getElementById(`lineDisplay-${lineNumber}`).classList.remove('hidden');
+      document.getElementById(`lineEdit-${lineNumber}`).classList.add('hidden');
+
+      // Refresh the cards
+      renderStories(appState.filteredStories);
+
+      showNotification(`Line ${lineNumber} updated! ✓`);
+    } else {
+      alert('Error updating line: ' + data.error);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error updating line');
+  }
 }
 
 // ============================================

@@ -235,11 +235,24 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
     const totalTokens = usage.input_tokens + usage.output_tokens;
     const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
 
+    // Extract title from selectedPath or use custom description or generate from userInput
+    let storyTitle = null;
+    if (selectedPath && selectedPath.title) {
+      storyTitle = selectedPath.title;
+    } else if (customDescription) {
+      // Use first 100 chars of custom description as title
+      storyTitle = customDescription.substring(0, 100);
+    } else {
+      // Use first 100 chars of user input as title
+      storyTitle = userInput.substring(0, 100);
+    }
+
     const { data: conversationData, error: convError } = await supabase
       .from('conversations')
       .insert([{
         user_input: userInput,
         ai_response: JSON.stringify(storyData.story),
+        title: storyTitle,
         prompt_used: systemPrompt.substring(0, 500),
         prompt_type: 'generate_story',
         user_id: userId,
@@ -503,6 +516,81 @@ router.delete('/history/:id', requireAuthentication, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete story. Please try again later.'
+    });
+  }
+});
+
+// ============================================
+// PATCH - Update story (title or content)
+// ============================================
+router.patch('/update-story/:id', requireAuthentication, async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const storyId = req.params.id;
+    const { title, ai_response } = req.body;
+
+    // Verificar se a história pertence ao usuário
+    const { data: story, error: fetchError } = await supabase
+      .from('conversations')
+      .select('user_id')
+      .eq('id', storyId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (!story || story.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized to update this story'
+      });
+    }
+
+    // Build update object with only provided fields
+    const updateData = {};
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+    if (ai_response !== undefined) {
+      // Validate it's valid JSON
+      try {
+        JSON.parse(ai_response);
+        updateData.ai_response = ai_response;
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid story data format'
+        });
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No update data provided'
+      });
+    }
+
+    // Update story
+    const { data: updatedStory, error: updateError } = await supabase
+      .from('conversations')
+      .update(updateData)
+      .eq('id', storyId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      message: 'Story updated successfully',
+      story: updatedStory
+    });
+  } catch (error) {
+    console.error('Error updating story:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update story. Please try again later.'
     });
   }
 });
