@@ -23,7 +23,7 @@ const app = express();
 // SECURITY MIDDLEWARE
 // ============================================
 
-// Helmet for security headers (configured to allow Clerk and Sentry)
+// Helmet for security headers (configured to allow Clerk, Sentry, and PostHog)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -33,7 +33,8 @@ app.use(helmet({
         "'unsafe-inline'",
         "https://noted-hornet-6.clerk.accounts.dev",
         "https://*.clerk.accounts.dev",
-        "https://browser.sentry-cdn.com"
+        "https://browser.sentry-cdn.com",
+        "https://us-assets.i.posthog.com"
       ],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
@@ -44,6 +45,7 @@ app.use(helmet({
         "https://api.anthropic.com",
         "https://*.ingest.sentry.io",
         "https://o4510323955728384.ingest.us.sentry.io",
+        "https://us.i.posthog.com",
         process.env.SUPABASE_URL
       ].filter(Boolean),
       frameSrc: ["'self'", "https://*.clerk.accounts.dev"],
