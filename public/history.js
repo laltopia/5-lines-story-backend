@@ -21,28 +21,110 @@ let appState = {
 };
 
 // ============================================
+// ERROR HANDLING & RETRY LOGIC
+// ============================================
+
+/**
+ * Handle API errors with user-friendly messages
+ */
+function handleApiError(error, context = 'Operation') {
+  console.error(`Error in ${context}:`, error);
+
+  // Check if offline
+  if (!navigator.onLine) {
+    return 'You appear to be offline. Please check your internet connection and try again.';
+  }
+
+  // Rate limit errors
+  if (error.status === 429 || error.message?.includes('429')) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+
+  // Authentication errors
+  if (error.status === 401 || error.message?.includes('401')) {
+    return 'Your session has expired. Please refresh the page and sign in again.';
+  }
+
+  // Server errors
+  if (error.status >= 500) {
+    return 'Our servers are experiencing issues. Please try again in a moment.';
+  }
+
+  // Network errors
+  if (error.message?.includes('fetch') || error.message?.includes('network')) {
+    return 'Network error. Please check your connection and try again.';
+  }
+
+  // Default error message
+  return error.message || 'Something went wrong. Please try again.';
+}
+
+/**
+ * Fetch with retry logic
+ */
+async function fetchWithRetry(url, options = {}, maxRetries = 2) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.ok) {
+        return response;
+      }
+
+      // Don't retry client errors (except 429)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        const error = new Error(`Request failed with status ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      // Retry with exponential backoff
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Retrying after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      const error = new Error(`Request failed with status ${response.status}`);
+      error.status = response.status;
+      throw error;
+
+    } catch (err) {
+      if (attempt < maxRetries && (err.message?.includes('fetch') || err.message?.includes('network'))) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Network error, retrying after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+// ============================================
 // CARREGAR HISTÓRIAS
 // ============================================
 async function loadStories() {
   const loading = document.getElementById('loading');
   const storiesGrid = document.getElementById('storiesGrid');
   const emptyState = document.getElementById('emptyState');
-  
+
   loading.classList.remove('hidden');
   storiesGrid.classList.add('hidden');
   emptyState.classList.add('hidden');
-  
+
   try {
     const token = await window.Clerk.session.getToken();
-    
-    const response = await fetch('/api/ai/history', {
+
+    const response = await fetchWithRetry('/api/ai/history', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
+
     const data = await response.json();
-    
+
     loading.classList.add('hidden');
-    
+
     if (data.success && data.conversations.length > 0) {
       appState.stories = data.conversations;
       appState.filteredStories = data.conversations;
@@ -54,6 +136,11 @@ async function loadStories() {
   } catch (error) {
     console.error('Error loading stories:', error);
     loading.classList.add('hidden');
+
+    const errorMessage = handleApiError(error, 'loading stories');
+    showNotification(errorMessage, 'error');
+
+    // Show empty state with error message
     emptyState.classList.remove('hidden');
   }
 }
@@ -377,16 +464,29 @@ async function saveTitle() {
   const newTitle = document.getElementById('titleInput').value.trim();
 
   if (!newTitle) {
-    alert('Title cannot be empty');
+    showNotification('Title cannot be empty', 'error');
     return;
   }
 
   if (!appState.currentStory) return;
 
+  const saveTitleBtn = document.getElementById('saveTitleBtn');
+  const originalText = saveTitleBtn.innerHTML;
+
   try {
+    // Show loading state
+    saveTitleBtn.disabled = true;
+    saveTitleBtn.innerHTML = `
+      <svg style="width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block;" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span style="margin-left: 4px;">Saving...</span>
+    `;
+
     const token = await window.Clerk.session.getToken();
 
-    const response = await fetch(`/api/ai/update-story/${appState.currentStory.id}`, {
+    const response = await fetchWithRetry(`/api/ai/update-story/${appState.currentStory.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -413,13 +513,17 @@ async function saveTitle() {
       // Refresh the cards to show new title
       renderStories(appState.filteredStories);
 
-      showNotification('Title updated! ✓');
+      showNotification('Title updated successfully!', 'success');
     } else {
-      alert('Error updating title: ' + data.error);
+      showNotification('Error updating title: ' + data.error, 'error');
     }
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error updating title');
+    const errorMessage = handleApiError(error, 'updating title');
+    showNotification(errorMessage, 'error');
+  } finally {
+    // Restore button state
+    saveTitleBtn.disabled = false;
+    saveTitleBtn.innerHTML = originalText;
   }
 }
 
@@ -447,20 +551,33 @@ async function saveLine(lineNumber) {
   const newText = document.getElementById(`lineTextarea-${lineNumber}`).value.trim();
 
   if (!newText) {
-    alert('Line cannot be empty');
+    showNotification('Line cannot be empty', 'error');
     return;
   }
 
   if (!appState.currentStory) return;
 
+  const saveLineBtn = document.querySelector(`.save-line-btn[data-line="${lineNumber}"]`);
+  const originalText = saveLineBtn.innerHTML;
+
   try {
+    // Show loading state
+    saveLineBtn.disabled = true;
+    saveLineBtn.innerHTML = `
+      <svg style="width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block;" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span style="margin-left: 4px;">Saving...</span>
+    `;
+
     const token = await window.Clerk.session.getToken();
 
     // Update story object
     const aiResponse = JSON.parse(appState.currentStory.ai_response);
     aiResponse[`line${lineNumber}`] = newText;
 
-    const response = await fetch(`/api/ai/update-story/${appState.currentStory.id}`, {
+    const response = await fetchWithRetry(`/api/ai/update-story/${appState.currentStory.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -489,13 +606,17 @@ async function saveLine(lineNumber) {
       // Refresh the cards
       renderStories(appState.filteredStories);
 
-      showNotification(`Line ${lineNumber} updated! ✓`);
+      showNotification(`Line ${lineNumber} updated successfully!`, 'success');
     } else {
-      alert('Error updating line: ' + data.error);
+      showNotification('Error updating line: ' + data.error, 'error');
     }
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error updating line');
+    const errorMessage = handleApiError(error, 'updating line');
+    showNotification(errorMessage, 'error');
+  } finally {
+    // Restore button state
+    saveLineBtn.disabled = false;
+    saveLineBtn.innerHTML = originalText;
   }
 }
 
@@ -547,57 +668,92 @@ async function deleteStory(storyId) {
   if (!confirm('Delete this story? This action cannot be undone.')) {
     return;
   }
-  
+
+  // Find the delete button for this story
+  const deleteBtn = document.querySelector(`.delete-btn[data-story-id="${storyId}"]`);
+  let originalHTML = null;
+
   try {
+    // Show loading state on button
+    if (deleteBtn) {
+      originalHTML = deleteBtn.innerHTML;
+      deleteBtn.disabled = true;
+      deleteBtn.innerHTML = `
+        <svg style="width: 16px; height: 16px; animation: spin 1s linear infinite;" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </svg>
+      `;
+    }
+
     const token = await window.Clerk.session.getToken();
-    
-    const response = await fetch(`/api/ai/history/${storyId}`, {
+
+    const response = await fetchWithRetry(`/api/ai/history/${storyId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
-      showNotification('Story deleted successfully');
-      // Remover da lista
+      showNotification('Story deleted successfully', 'success');
+      // Remove from list
       appState.stories = appState.stories.filter(s => s.id !== storyId);
       appState.filteredStories = appState.filteredStories.filter(s => s.id !== storyId);
       renderStories(appState.filteredStories);
+
+      // Close modal if deleting current story
+      if (appState.currentStory && appState.currentStory.id === storyId) {
+        closeModal();
+      }
     } else {
-      alert('Error deleting story: ' + data.error);
+      showNotification('Error deleting story: ' + data.error, 'error');
     }
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error deleting story');
+    const errorMessage = handleApiError(error, 'deleting story');
+    showNotification(errorMessage, 'error');
+  } finally {
+    // Restore button state
+    if (deleteBtn && originalHTML) {
+      deleteBtn.disabled = false;
+      deleteBtn.innerHTML = originalHTML;
+    }
   }
 }
 
 // ============================================
 // NOTIFICAÇÃO
 // ============================================
-function showNotification(message) {
+function showNotification(message, type = 'success') {
   const notification = document.createElement('div');
+
+  const colors = {
+    success: '#10b981',
+    error: '#ef4444',
+    info: '#6366f1'
+  };
+
   notification.style.cssText = `
     position: fixed;
     top: 80px;
     right: 20px;
-    background: #10b981;
+    background: ${colors[type] || colors.success};
     color: white;
     padding: 16px 24px;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
     animation: slideIn 0.3s ease-out;
+    max-width: 400px;
   `;
   notification.textContent = message;
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.style.animation = 'slideOut 0.3s ease-out';
     setTimeout(() => notification.remove(), 300);
-  }, 3000);
+  }, type === 'error' ? 5000 : 3000);
 }
 
 const style = document.createElement('style');
