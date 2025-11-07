@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>5 Lines Story - Create Your Story</title>
-  
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="/design-system.css">
+
   <style>
     * {
       margin: 0;
@@ -438,10 +441,43 @@
   ></script>
 </head>
 <body>
+  <!-- SVG Icon Library -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M8.757 15.243l-2.121 2.121m12.728 0l-2.121-2.121M8.757 8.757L6.636 6.636"/>
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </symbol>
+    <symbol id="icon-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"/>
+      <circle cx="6" cy="12" r="3"/>
+      <circle cx="18" cy="19" r="3"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+    </symbol>
+    <symbol id="icon-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </symbol>
+  </svg>
+
   <!-- Header -->
   <header class="header">
     <a href="/" class="logo">
-      <span style="font-size: 28px;">✨</span>
+      <svg class="icon icon-lg" style="color: var(--purple-primary);">
+        <use href="#icon-sparkles"></use>
+      </svg>
       <span>5 Lines Story</span>
     </a>
     
@@ -503,32 +539,45 @@
 
     <!-- STEP 1: Input -->
     <div class="card" id="inputStep">
-      <h2 class="card-title">🎭 What's your story?</h2>
+      <h2 class="card-title">
+        <svg class="icon icon-md" style="color: var(--purple-primary); vertical-align: middle;">
+          <use href="#icon-book"></use>
+        </svg>
+        What's your story?
+      </h2>
       <p class="card-subtitle">Share your idea, experience, or message in any language</p>
-      
-      <textarea 
-        id="userInput" 
+
+      <textarea
+        id="userInput"
         placeholder="Example: A 40-year-old woman decides to restart her life...&#10;Exemplo: Uma mulher de 40 anos decide recomeçar a vida...&#10;Ejemplo: Una mujer de 40 años decide reiniciar su vida..."
         required
       ></textarea>
 
       <div style="margin-top: 20px; display: flex; gap: 12px;">
         <button class="btn btn-primary btn-full" id="submitInputBtn">
-          ✨ Generate Story Paths
+          <svg class="icon icon-md">
+            <use href="#icon-sparkles"></use>
+          </svg>
+          Generate Story Paths
         </button>
       </div>
 
       <!-- Future: Audio & Document upload -->
-      <div style="margin-top: 16px; padding: 16px; background: #f9fafb; border-radius: 12px; text-align: center;">
-        <p style="font-size: 14px; color: #9ca3af;">
-          🎤 Audio & 📄 Document input coming soon!
+      <div style="margin-top: 16px; padding: 16px; background: var(--purple-bg); border-radius: 12px; text-align: center;">
+        <p style="font-size: 14px; color: var(--text-secondary);">
+          Audio & Document input coming soon!
         </p>
       </div>
     </div>
 
     <!-- STEP 2: Choose Path -->
     <div class="card hidden" id="pathStep">
-      <h2 class="card-title">🛤️ Choose Your Story Direction</h2>
+      <h2 class="card-title">
+        <svg class="icon icon-md" style="color: var(--purple-primary); vertical-align: middle;">
+          <use href="#icon-sparkles"></use>
+        </svg>
+        Choose Your Story Direction
+      </h2>
       <p class="card-subtitle">Pick one of these paths, or describe your own</p>
       
       <div id="loading1" class="loading hidden">
@@ -550,17 +599,28 @@
 
       <div style="margin-top: 20px; display: flex; gap: 12px;">
         <button class="btn btn-secondary" id="backToStep1Btn">
-          ← Back
+          <svg class="icon icon-sm">
+            <use href="#icon-arrow-left"></use>
+          </svg>
+          Back
         </button>
         <button class="btn btn-primary btn-full" id="generateStoryBtn">
-          ✨ Generate 5 Lines
+          <svg class="icon icon-md">
+            <use href="#icon-sparkles"></use>
+          </svg>
+          Generate 5 Lines
         </button>
       </div>
     </div>
 
     <!-- STEP 3: Story Display & Edit -->
     <div class="card hidden" id="storyStep">
-      <h2 class="card-title">📖 Your 5 Lines Story</h2>
+      <h2 class="card-title">
+        <svg class="icon icon-md" style="color: var(--purple-primary); vertical-align: middle;">
+          <use href="#icon-book"></use>
+        </svg>
+        Your 5 Lines Story
+      </h2>
       <p class="card-subtitle">Click any line to edit it</p>
       
       <div id="loading2" class="loading hidden">
@@ -572,13 +632,22 @@
 
       <div style="margin-top: 32px; display: flex; gap: 12px;">
         <button class="btn btn-secondary" id="startOverBtn">
-          🔄 Start Over
+          <svg class="icon icon-sm">
+            <use href="#icon-refresh"></use>
+          </svg>
+          Start Over
         </button>
         <button class="btn btn-primary" id="shareStoryBtn">
-          📤 Share Story
+          <svg class="icon icon-sm">
+            <use href="#icon-share"></use>
+          </svg>
+          Share Story
         </button>
         <button class="btn btn-success btn-full" id="saveHistoryBtn">
-          💾 Save & View History
+          <svg class="icon icon-sm">
+            <use href="#icon-save"></use>
+          </svg>
+          Save & View History
         </button>
       </div>
     </div>

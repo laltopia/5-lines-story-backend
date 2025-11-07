@@ -86,11 +86,15 @@ function renderStories(stories) {
         <div class="story-header">
           <div class="story-date">${escapeHtml(date)}</div>
           <div class="story-actions">
-            <button class="icon-btn share-btn" data-story-id="${story.id}" title="Share">
-              📤
+            <button class="icon-button share-btn" data-story-id="${story.id}" title="Share">
+              <svg class="icon">
+                <use href="#icon-share"></use>
+              </svg>
             </button>
-            <button class="icon-btn delete-btn" data-story-id="${story.id}" title="Delete">
-              🗑️
+            <button class="icon-button delete-btn" data-story-id="${story.id}" title="Delete">
+              <svg class="icon">
+                <use href="#icon-trash"></use>
+              </svg>
             </button>
           </div>
         </div>
@@ -227,8 +231,10 @@ function openStoryModal(storyId) {
     <div style="margin-bottom: 24px;">
       <div style="font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
         <span>Story Title</span>
-        <button class="icon-btn" id="editTitleBtn" title="Edit title" style="width: 28px; height: 28px; font-size: 14px;">
-          ✏️
+        <button class="icon-button" id="editTitleBtn" title="Edit title">
+          <svg class="icon icon-sm">
+            <use href="#icon-edit"></use>
+          </svg>
         </button>
       </div>
       <div id="titleDisplay" style="font-size: 20px; font-weight: 600; color: #111827; padding: 12px; background: #f9fafb; border-radius: 12px; cursor: pointer;">
@@ -264,8 +270,10 @@ function openStoryModal(storyId) {
         <div class="modal-line-label">
           <div class="line-number">${index + 1}</div>
           <span>${escapeHtml(lineLabels[index])}</span>
-          <button class="icon-btn edit-line-btn" data-line="${index + 1}" title="Edit line" style="width: 28px; height: 28px; font-size: 14px; margin-left: auto;">
-            ✏️
+          <button class="icon-button edit-line-btn" data-line="${index + 1}" title="Edit line" style="margin-left: auto;">
+            <svg class="icon icon-sm">
+              <use href="#icon-edit"></use>
+            </svg>
           </button>
         </div>
         <div class="modal-line-content editable-line" id="lineDisplay-${index + 1}" data-line="${index + 1}">
