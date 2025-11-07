@@ -441,17 +441,22 @@ async function generateStory() {
   try {
     const token = await window.Clerk.session.getToken();
 
+    // Prepare request body with input type and file metadata
+    const requestBody = {
+      userInput: appState.userInput,
+      selectedPath: appState.selectedPath,
+      customDescription: appState.customPath || null,
+      inputType: window.documentUploadMetadata ? 'document' : 'text',
+      originalFileInfo: window.documentUploadMetadata || null
+    };
+
     const response = await fetchWithRetry('/api/ai/generate-story', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        userInput: appState.userInput,
-        selectedPath: appState.selectedPath,
-        customDescription: appState.customPath || null
-      })
+      body: JSON.stringify(requestBody)
     });
 
     const data = await response.json();

@@ -430,17 +430,30 @@
         <span class="badge">Coming Soon</span>
       </div>
 
-      <div class="card coming-soon" id="documentCard">
+      <div class="card" id="documentCard">
         <div class="card-icon">
-          <svg class="icon icon-xl" style="color: var(--text-secondary);">
+          <svg class="icon icon-xl" id="doc-icon" style="color: var(--purple-primary);">
             <use href="#icon-file"></use>
           </svg>
         </div>
         <h3 class="card-title">Document</h3>
-        <p class="card-description">Upload PDF, PPT, DOC</p>
-        <span class="badge">Coming Soon</span>
+        <p class="card-description" id="doc-status">Upload PDF, DOC, DOCX, TXT</p>
+
+        <!-- Upload progress (initially hidden) -->
+        <div class="upload-status hidden" id="upload-status" style="margin-top: 16px; width: 100%;">
+          <div style="background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden;">
+            <div id="upload-progress" style="background: var(--purple-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+          <p id="upload-message" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Uploading...</p>
+        </div>
       </div>
     </div>
+
+    <!-- Hidden file input -->
+    <input type="file"
+           id="document-upload"
+           accept=".pdf,.doc,.docx,.txt"
+           style="display: none;">
   </main>
 
   <footer class="footer">
@@ -582,10 +595,85 @@
           });
         }
 
+        // Document upload functionality
         const documentCard = document.getElementById('documentCard');
-        if (documentCard) {
+        const documentUpload = document.getElementById('document-upload');
+        const uploadStatus = document.getElementById('upload-status');
+        const uploadProgress = document.getElementById('upload-progress');
+        const uploadMessage = document.getElementById('upload-message');
+        const docStatus = document.getElementById('doc-status');
+        const docIcon = document.getElementById('doc-icon');
+
+        if (documentCard && documentUpload) {
+          // Trigger file picker when card is clicked
           documentCard.addEventListener('click', () => {
-            alert('Document upload coming soon!');
+            documentUpload.click();
+          });
+
+          // Handle file selection
+          documentUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+              // Show upload status
+              uploadStatus.classList.remove('hidden');
+              uploadProgress.style.width = '0%';
+              uploadMessage.textContent = 'Uploading...';
+              docStatus.textContent = 'Uploading file...';
+              docIcon.style.color = 'var(--text-secondary)';
+
+              // Create FileUploader instance
+              const uploader = new FileUploader({
+                maxSizeMB: 10,
+                onProgress: (progress) => {
+                  uploadProgress.style.width = progress.progress + '%';
+                  if (progress.status === 'extracting') {
+                    uploadMessage.textContent = 'Extracting text...';
+                    docStatus.textContent = 'Extracting text...';
+                  }
+                }
+              });
+
+              // Upload and extract text
+              const result = await uploader.uploadAndExtract(file);
+
+              // Success! Store the extracted text and metadata
+              sessionStorage.setItem('documentText', result.text);
+              sessionStorage.setItem('documentMetadata', JSON.stringify(result.metadata));
+
+              // Show success message
+              uploadProgress.style.width = '100%';
+              uploadMessage.textContent = `Extracted ${result.metadata.extractedLength} characters`;
+              docStatus.textContent = 'Text extracted successfully!';
+              docIcon.style.color = 'var(--success-primary)';
+
+              // Wait a bit then navigate to AI page
+              setTimeout(() => {
+                window.location.href = '/ai.html?source=document';
+              }, 1500);
+
+            } catch (error) {
+              console.error('Document upload error:', error);
+
+              // Show error
+              uploadProgress.style.width = '0%';
+              uploadMessage.textContent = 'Error: ' + error.message;
+              uploadMessage.style.color = '#ef4444';
+              docStatus.textContent = 'Upload failed';
+              docIcon.style.color = '#ef4444';
+
+              // Reset after 3 seconds
+              setTimeout(() => {
+                uploadStatus.classList.add('hidden');
+                uploadMessage.style.color = 'var(--text-secondary)';
+                docStatus.textContent = 'Upload PDF, DOC, DOCX, TXT';
+                docIcon.style.color = 'var(--purple-primary)';
+              }, 3000);
+            } finally {
+              // Reset file input
+              e.target.value = '';
+            }
           });
         }
       } catch (error) {
