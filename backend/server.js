@@ -1,4 +1,12 @@
+// ============================================
+// SENTRY INITIALIZATION (MUST BE FIRST!)
+// ============================================
+// Import Sentry BEFORE everything else to capture all errors
+const Sentry = require('./instrument');
+
+// Now load environment variables
 require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
@@ -15,7 +23,7 @@ const app = express();
 // SECURITY MIDDLEWARE
 // ============================================
 
-// Helmet for security headers (configured to allow Clerk)
+// Helmet for security headers (configured to allow Clerk and Sentry)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -24,7 +32,8 @@ app.use(helmet({
         "'self'",
         "'unsafe-inline'",
         "https://noted-hornet-6.clerk.accounts.dev",
-        "https://*.clerk.accounts.dev"
+        "https://*.clerk.accounts.dev",
+        "https://browser.sentry-cdn.com"
       ],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
@@ -33,6 +42,8 @@ app.use(helmet({
         "https://noted-hornet-6.clerk.accounts.dev",
         "https://*.clerk.accounts.dev",
         "https://api.anthropic.com",
+        "https://*.ingest.sentry.io",
+        "https://o4510323955728384.ingest.us.sentry.io",
         process.env.SUPABASE_URL
       ].filter(Boolean),
       frameSrc: ["'self'", "https://*.clerk.accounts.dev"],
@@ -122,7 +133,43 @@ app.get('/api/me', (req, res) => {
   }
 });
 
+// Test endpoint for Sentry (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  app.get("/debug-sentry", function mainHandler(req, res) {
+    // Send a log before throwing the error
+    Sentry.logger.info('User triggered test error', {
+      action: 'test_error_endpoint',
+    });
+    throw new Error("Sentry test error - this is intentional!");
+  });
+}
+
+// ============================================
+// SENTRY ERROR HANDLER
+// ============================================
+// The Sentry error handler must be registered before any other error middleware
+// and after all controllers/routes
+Sentry.setupExpressErrorHandler(app);
+
+// Optional fallthrough error handler
+app.use(function onError(err, req, res, next) {
+  // Log error for debugging
+  console.error('Error caught by error handler:', err);
+
+  // The error id is attached to `res.sentry` to be returned
+  // and optionally displayed to the user for support.
+  res.statusCode = err.statusCode || 500;
+  res.json({
+    success: false,
+    error: process.env.NODE_ENV === 'production'
+      ? 'An error occurred. Please try again later.'
+      : err.message,
+    errorId: res.sentry // Include Sentry error ID for support
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('Server running on port ' + PORT);
+  console.log('Sentry error monitoring:', process.env.SENTRY_DSN ? 'enabled' : 'disabled (no DSN)');
 });

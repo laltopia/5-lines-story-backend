@@ -10,6 +10,7 @@
     "@anthropic-ai/sdk": "^0.27.0",
     "@clerk/clerk-sdk-node": "^5.0.0",
     "@clerk/express": "^1.0.0",
+    "@sentry/node": "^10.23.0",
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
