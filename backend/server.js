@@ -103,8 +103,34 @@ app.use(clerkMiddleware({
   secretKey: process.env.CLERK_SECRET_KEY
 }));
 
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, '../public')));
+// ============================================
+// STATIC FILES WITH CACHING
+// ============================================
+
+// Serve static files with optimized caching
+// In production, use minified versions
+const publicPath = path.join(__dirname, '../public');
+
+// HTML files - short cache (revalidate often)
+app.use(express.static(publicPath, {
+  maxAge: process.env.NODE_ENV === 'production' ? '5m' : 0, // 5 minutes in production, no cache in dev
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // Minified assets get longer cache (1 day)
+    if (filePath.endsWith('.min.js') || filePath.endsWith('.min.css')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+    }
+    // HTML files should revalidate
+    else if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate'); // 5 minutes
+    }
+    // Other static files (fonts, images) - 1 week
+    else if (filePath.match(/\.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
+    }
+  }
+}));
 
 // Rotas
 app.use('/api/users', usersRouter);

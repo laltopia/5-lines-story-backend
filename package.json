@@ -4,7 +4,11 @@
   "description": "Backend com Clerk Auth",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "cleancss -o public/design-system.min.css public/design-system.css && cleancss -o public/styles.min.css public/styles.css",
+    "build:js": "terser public/ai.js -c -m -o public/ai.min.js && terser public/history.js -c -m -o public/history.min.js && terser public/app.js -c -m -o public/app.min.js",
+    "clean": "rm -f public/*.min.css public/*.min.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
@@ -18,5 +22,9 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "joi": "^18.0.1"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "terser": "^5.44.1"
   }
 }
