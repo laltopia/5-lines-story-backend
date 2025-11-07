@@ -82,6 +82,16 @@ class FileUploader {
     }
 
     try {
+      // Get authentication token from Clerk
+      if (!window.Clerk || !window.Clerk.session) {
+        throw new Error('You must be logged in to upload documents');
+      }
+
+      const token = await window.Clerk.session.getToken();
+      if (!token) {
+        throw new Error('Authentication failed. Please refresh and try again.');
+      }
+
       // Create form data
       const formData = new FormData();
       formData.append('document', file);
@@ -91,9 +101,12 @@ class FileUploader {
         this.onProgress({ status: 'uploading', progress: 0 });
       }
 
-      // Upload file
+      // Upload file with authentication
       const response = await fetch('/api/ai/extract-text', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
         // Note: Don't set Content-Type header, browser will set it with boundary
       });
