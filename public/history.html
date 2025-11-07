@@ -464,11 +464,10 @@
     <!-- Actions Bar -->
     <div class="actions-bar">
       <div class="search-box">
-        <input 
-          type="text" 
-          id="searchInput" 
-          placeholder="🔍 Search stories..." 
-          onkeyup="filterStories()"
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="🔍 Search stories..."
         >
       </div>
       <a href="/ai.html" class="btn btn-primary">
@@ -501,12 +500,12 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 class="modal-title" id="modalTitle">Story Details</h2>
-        <button class="close-btn" onclick="closeModal()">×</button>
+        <button class="close-btn" id="modalCloseBtn">×</button>
       </div>
       <div id="modalBody"></div>
       <div style="display: flex; gap: 12px; margin-top: 24px;">
-        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-        <button class="btn btn-primary" onclick="shareCurrentStory()" style="flex: 1;">
+        <button class="btn btn-secondary" id="modalCloseFooterBtn">Close</button>
+        <button class="btn btn-primary" id="modalShareBtn" style="flex: 1;">
           📤 Share Story
         </button>
       </div>
@@ -527,27 +526,71 @@
   <script src="https://widget.userjot.com/widget.js" async></script>
 
   <script src="/history.js"></script>
-  
+
   <script>
     // Check authentication
     window.addEventListener("load", async function () {
       await window.Clerk.load();
-      
+
       const authLoading = document.getElementById('auth-loading');
       const mainContent = document.getElementById('main-content');
       const userButtonDiv = document.getElementById('user-button');
-      
+
       if (window.Clerk.user) {
         window.Clerk.mountUserButton(userButtonDiv);
         authLoading.style.display = 'none';
         mainContent.classList.remove('hidden');
-        
+
+        // CRITICAL: Attach static event listeners (CSP compliant)
+        attachStaticEventListeners();
+
         // Load stories
         await loadStories();
       } else {
         window.location.href = '/';
       }
     });
+
+    // ============================================
+    // ATTACH STATIC EVENT LISTENERS (CSP COMPLIANT)
+    // ============================================
+    function attachStaticEventListeners() {
+      // Search input
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+          filterStories();
+        });
+        console.log('Search input listener attached');
+      }
+
+      // Modal close button (header X)
+      const modalCloseBtn = document.getElementById('modalCloseBtn');
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', function() {
+          closeModal();
+        });
+        console.log('Modal close button listener attached');
+      }
+
+      // Modal close button (footer)
+      const modalCloseFooterBtn = document.getElementById('modalCloseFooterBtn');
+      if (modalCloseFooterBtn) {
+        modalCloseFooterBtn.addEventListener('click', function() {
+          closeModal();
+        });
+        console.log('Modal close footer button listener attached');
+      }
+
+      // Modal share button
+      const modalShareBtn = document.getElementById('modalShareBtn');
+      if (modalShareBtn) {
+        modalShareBtn.addEventListener('click', function() {
+          shareCurrentStory();
+        });
+        console.log('Modal share button listener attached');
+      }
+    }
   </script>
 </body>
 </html>

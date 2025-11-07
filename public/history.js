@@ -59,7 +59,7 @@ async function loadStories() {
 }
 
 // ============================================
-// RENDERIZAR HISTÓRIAS (XSS PROTECTED)
+// RENDERIZAR HISTÓRIAS (XSS PROTECTED + CSP COMPLIANT)
 // ============================================
 function renderStories(stories) {
   const grid = document.getElementById('storiesGrid');
@@ -79,14 +79,14 @@ function renderStories(stories) {
     });
 
     return `
-      <div class="story-card" onclick="openStoryModal('${story.id}')">
+      <div class="story-card" data-story-id="${story.id}">
         <div class="story-header">
           <div class="story-date">${escapeHtml(date)}</div>
-          <div class="story-actions" onclick="event.stopPropagation()">
-            <button class="icon-btn" onclick="shareStory('${story.id}')" title="Share">
+          <div class="story-actions">
+            <button class="icon-btn share-btn" data-story-id="${story.id}" title="Share">
               📤
             </button>
-            <button class="icon-btn" onclick="deleteStory('${story.id}')" title="Delete">
+            <button class="icon-btn delete-btn" data-story-id="${story.id}" title="Delete">
               🗑️
             </button>
           </div>
@@ -109,6 +109,52 @@ function renderStories(stories) {
       </div>
     `;
   }).join('');
+
+  // CRITICAL: Attach event listeners using event delegation (CSP compliant)
+  attachStoryCardListeners();
+}
+
+// ============================================
+// ATTACH EVENT LISTENERS (CSP COMPLIANT)
+// ============================================
+function attachStoryCardListeners() {
+  const grid = document.getElementById('storiesGrid');
+
+  // Remove old listener if it exists (prevents accumulation)
+  const oldGrid = grid.cloneNode(true);
+  grid.replaceWith(oldGrid);
+  const newGrid = document.getElementById('storiesGrid');
+
+  // Event delegation: single listener on grid for all story cards and buttons
+  newGrid.addEventListener('click', (e) => {
+    // Check if clicked on share button
+    const shareBtn = e.target.closest('.share-btn');
+    if (shareBtn) {
+      e.stopPropagation(); // Don't trigger card click
+      const storyId = shareBtn.dataset.storyId;
+      shareStory(storyId);
+      return;
+    }
+
+    // Check if clicked on delete button
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (deleteBtn) {
+      e.stopPropagation(); // Don't trigger card click
+      const storyId = deleteBtn.dataset.storyId;
+      deleteStory(storyId);
+      return;
+    }
+
+    // Check if clicked on story card (but not on buttons)
+    const storyCard = e.target.closest('.story-card');
+    if (storyCard) {
+      const storyId = storyCard.dataset.storyId;
+      openStoryModal(storyId);
+      return;
+    }
+  });
+
+  console.log('Story card event listeners attached via event delegation');
 }
 
 // ============================================
