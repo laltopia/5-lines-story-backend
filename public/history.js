@@ -340,7 +340,9 @@ function attachModalEditListeners() {
   const editLineBtns = document.querySelectorAll('.edit-line-btn');
   editLineBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const lineNumber = e.target.dataset.line;
+      e.stopPropagation(); // Prevent other handlers
+      const lineNumber = btn.dataset.line; // Use btn instead of e.target to handle SVG clicks
+      console.log('Edit line button clicked, line:', lineNumber);
       startEditLine(lineNumber);
     });
   });
@@ -348,7 +350,9 @@ function attachModalEditListeners() {
   const cancelLineBtns = document.querySelectorAll('.cancel-line-btn');
   cancelLineBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const lineNumber = e.target.dataset.line;
+      e.stopPropagation(); // Prevent other handlers
+      const lineNumber = btn.dataset.line; // Use btn instead of e.target
+      console.log('Cancel line button clicked, line:', lineNumber);
       cancelEditLine(lineNumber);
     });
   });
@@ -356,7 +360,9 @@ function attachModalEditListeners() {
   const saveLineBtns = document.querySelectorAll('.save-line-btn');
   saveLineBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const lineNumber = e.target.dataset.line;
+      e.stopPropagation(); // Prevent other handlers
+      const lineNumber = btn.dataset.line; // Use btn instead of e.target
+      console.log('Save line button clicked, line:', lineNumber);
       saveLine(lineNumber);
     });
   });
