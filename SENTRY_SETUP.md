@@ -13,6 +13,14 @@ Sentry is now integrated into StoryMaking.AI for real-time error tracking and mo
 - ✅ CSP headers updated to allow Sentry
 - ✅ Test endpoint added: `/debug-sentry` (development only)
 
+### Frontend (Browser JavaScript)
+- ✅ Sentry browser SDK integrated via CDN
+- ✅ Added to all HTML pages: `index.html`, `ai.html`, `history.html`, `pricing.html`, `terms.html`, `privacy.html`
+- ✅ Performance monitoring enabled (10% sampling)
+- ✅ Session replay enabled (10% normal, 100% on errors)
+- ✅ Automatic page load tracking
+- ✅ Environment detection (localhost = development)
+
 ## Setup Instructions
 
 ### 1. Add Sentry DSN to Environment Variables
@@ -149,13 +157,54 @@ The server will start normally but won't send errors to Sentry.
 
 This should be more than enough for the initial launch.
 
+## Frontend Error Tracking
+
+### What Gets Tracked Automatically:
+- ✅ JavaScript errors and exceptions
+- ✅ Unhandled promise rejections
+- ✅ Console errors
+- ✅ Network request failures
+- ✅ Page load performance
+- ✅ User interactions (with Session Replay)
+
+### Testing Frontend Sentry:
+
+**Method 1: Trigger a JavaScript error**
+Open browser console on any page and run:
+```javascript
+throw new Error("Frontend Sentry test error");
+```
+
+**Method 2: Test unhandled promise rejection**
+```javascript
+Promise.reject("Test promise rejection");
+```
+
+**Method 3: Test from your code**
+In `public/ai.js` or `public/history.js`, add:
+```javascript
+// Test Sentry
+Sentry.captureMessage("Test message from frontend");
+```
+
+### Session Replay Feature:
+
+Sentry will record 10% of sessions and 100% of sessions where errors occur. This lets you see exactly what the user was doing when an error happened:
+- Mouse movements and clicks
+- Page navigation
+- Console logs
+- Network requests
+
+View replays in: **Sentry Dashboard → Replays**
+
 ## Next Steps
 
 1. ✅ Backend error monitoring is complete
-2. ⏳ Add frontend error monitoring (see Frontend Sentry setup instructions)
+2. ✅ Frontend error monitoring is complete
 3. ⏳ Set up alerts and notifications
 4. ⏳ Configure issue assignment rules
 5. ⏳ Integrate with Slack/Discord for real-time alerts
+6. ⏳ Add custom event tracking (story created, line refined, etc.)
 
 ## Troubleshooting
 

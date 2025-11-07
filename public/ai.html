@@ -5,6 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StoryMaking.AI - Create Your Story</title>
 
+  <!-- Sentry Error Monitoring -->
+  <script
+    src="https://browser.sentry-cdn.com/8.38.0/bundle.tracing.min.js"
+    integrity="sha384-eM6k0RiY4sB+RbFDiFPNhMJrJZNdZgoGCL7nrMRH0bQmw+1SJLIHJz3L8p0C6jzV"
+    crossorigin="anonymous"
+  ></script>
+  <script>
+    Sentry.init({
+      dsn: "https://52019df52a676c14ccdc3d16e61a353e@o4510323955728384.ingest.us.sentry.io/4510323998851072",
+      environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration(),
+      ],
+      // Performance Monitoring
+      tracesSampleRate: 0.1, // 10% of transactions
+      // Session Replay
+      replaysSessionSampleRate: 0.1, // 10% of sessions
+      replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors
+      // Send default PII data (IP addresses)
+      sendDefaultPii: true,
+    });
+  </script>
+
   <!-- Design System -->
   <link rel="stylesheet" href="/design-system.css">
 
