@@ -619,6 +619,11 @@
             if (!file) return;
 
             try {
+              // Check if FileUploader is available
+              if (typeof FileUploader === 'undefined') {
+                throw new Error('FileUploader class not loaded. Please refresh the page.');
+              }
+
               // Show upload status
               uploadStatus.classList.remove('hidden');
               uploadProgress.style.width = '0%';
