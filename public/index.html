@@ -719,9 +719,17 @@
         if (audioCard && audioUpload) {
           let recorder = null;
           let recordingTimer = null;
+          let isRecording = false;
+          let isProcessing = false;
 
           // Start recording immediately when card is clicked
           audioCard.addEventListener('click', async () => {
+            // Prevent starting new recording if already recording or processing
+            if (isRecording || isProcessing) {
+              console.log('Already recording or processing, ignoring click');
+              return;
+            }
+
             // Check if browser supports recording
             if (!AudioRecorder.isRecordingSupported()) {
               alert('Audio recording is not supported in your browser. Please use Chrome, Firefox, or Edge.');
@@ -757,6 +765,9 @@
               // Start recording
               await recorder.startRecording();
 
+              // Set recording state
+              isRecording = true;
+
               // Update UI to show recording state
               audioStatus.textContent = 'Recording...';
               audioIcon.style.color = '#ef4444'; // Red icon while recording
@@ -764,6 +775,8 @@
               audioStatusContainer.classList.remove('hidden');
               audioProgress.style.width = '0%';
               audioMessage.textContent = 'Recording: 0:00';
+              audioCard.style.cursor = 'default'; // Change cursor to indicate not clickable
+              audioCard.style.opacity = '0.7'; // Dim the card
 
               // Update timer every second
               recordingTimer = setInterval(() => {
@@ -774,6 +787,9 @@
             } catch (error) {
               console.error('Recording start error:', error);
               alert('Failed to start recording: ' + error.message);
+              isRecording = false;
+              audioCard.style.cursor = 'pointer';
+              audioCard.style.opacity = '1';
             }
           });
 
@@ -789,11 +805,16 @@
                   recordingTimer = null;
                 }
 
+                // Update state
+                isRecording = false;
+                isProcessing = true;
+
                 // Stop recording
                 const audioBlob = await recorder.stopRecording();
 
                 // Hide controls, show upload status
                 audioControls.classList.add('hidden');
+                audioStatusContainer.classList.remove('hidden'); // Ensure status container stays visible
                 audioProgress.style.width = '0%';
                 audioMessage.textContent = 'Uploading audio...';
                 audioStatus.textContent = 'Processing audio...';
@@ -840,6 +861,9 @@
                   audioMessage.style.color = 'var(--text-secondary)';
                   audioStatus.textContent = 'Record or upload audio';
                   audioIcon.style.color = 'var(--purple-primary)';
+                  audioCard.style.cursor = 'pointer';
+                  audioCard.style.opacity = '1';
+                  isProcessing = false;
                   recorder = null;
                 }, 3000);
               }
@@ -860,11 +884,15 @@
               // Cancel recording
               recorder.cancelRecording();
 
-              // Reset UI
+              // Reset UI and state
               audioStatusContainer.classList.add('hidden');
               audioControls.classList.add('hidden');
               audioStatus.textContent = 'Record or upload audio';
               audioIcon.style.color = 'var(--purple-primary)';
+              audioCard.style.cursor = 'pointer';
+              audioCard.style.opacity = '1';
+              isRecording = false;
+              isProcessing = false;
               recorder = null;
             });
           }
