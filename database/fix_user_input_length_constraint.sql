@@ -44,11 +44,13 @@ CHECK (LENGTH(user_input) <= 50000);
 
 -- Verify the new constraint exists
 SELECT
-  constraint_name,
-  check_clause
-FROM information_schema.check_constraints
-WHERE constraint_name = 'check_user_input_length'
-AND table_name = 'conversations';
+  tc.constraint_name,
+  cc.check_clause
+FROM information_schema.table_constraints tc
+JOIN information_schema.check_constraints cc
+  ON tc.constraint_name = cc.constraint_name
+WHERE tc.constraint_name = 'check_user_input_length'
+  AND tc.table_name = 'conversations';
 
 -- Show current max length in conversations table
 SELECT
