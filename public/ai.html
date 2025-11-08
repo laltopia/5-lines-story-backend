@@ -217,6 +217,7 @@
       width: 100%;
       min-height: 150px;
       padding: 16px;
+      padding-bottom: 50px; /* Make room for mic button */
       border: 2px solid #e5e7eb;
       border-radius: 12px;
       font-size: 16px;
@@ -228,6 +229,103 @@
     textarea:focus {
       outline: none;
       border-color: #6366f1;
+    }
+
+    /* Input container for mic button */
+    .input-container {
+      position: relative;
+    }
+
+    /* Microphone button */
+    .mic-button {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #e5e7eb;
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .mic-button:hover {
+      border-color: #6366f1;
+      background: #f8f9fa;
+    }
+
+    .mic-button.recording {
+      background: #ef4444;
+      border-color: #ef4444;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .mic-button.recording svg {
+      color: white !important;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+      }
+    }
+
+    /* Recording controls */
+    .recording-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+      padding: 12px;
+      background: #fef2f2;
+      border-radius: 8px;
+      border: 1px solid #fecaca;
+    }
+
+    .recording-timer {
+      font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: #ef4444;
+      flex: 1;
+    }
+
+    .recording-controls button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .recording-controls .stop-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .recording-controls .stop-btn:hover {
+      background: #dc2626;
+    }
+
+    .recording-controls .cancel-btn {
+      background: #6b7280;
+      color: white;
+    }
+
+    .recording-controls .cancel-btn:hover {
+      background: #4b5563;
     }
 
     /* Buttons */
@@ -661,11 +759,35 @@
       </h2>
       <p class="card-subtitle">Share your idea, experience, or message in any language</p>
 
-      <textarea
-        id="userInput"
-        placeholder="Example: A 40-year-old woman decides to restart her life...&#10;Exemplo: Uma mulher de 40 anos decide recomeçar a vida...&#10;Ejemplo: Una mujer de 40 años decide reiniciar su vida..."
-        required
-      ></textarea>
+      <div class="input-container">
+        <textarea
+          id="userInput"
+          placeholder="Example: A 40-year-old woman decides to restart her life...&#10;Exemplo: Uma mulher de 40 anos decide recomeçar a vida...&#10;Ejemplo: Una mujer de 40 años decide reiniciar su vida..."
+          required
+        ></textarea>
+
+        <!-- Microphone button -->
+        <button class="mic-button" id="micButton" type="button" title="Record audio">
+          <svg class="icon icon-md" style="color: #6b7280;">
+            <use href="#icon-mic"></use>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Recording controls (hidden by default) -->
+      <div class="recording-controls hidden" id="recordingControls">
+        <span class="recording-timer" id="recordingTimer">Recording: 0:00</span>
+        <button class="stop-btn" id="stopRecordingBtn">Stop</button>
+        <button class="cancel-btn" id="cancelRecordingBtn">Cancel</button>
+      </div>
+
+      <!-- Upload status (hidden by default) -->
+      <div class="upload-status hidden" id="uploadStatus" style="margin-top: 16px; width: 100%;">
+        <div style="background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden;">
+          <div id="uploadProgress" style="background: var(--purple-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+        </div>
+        <p id="uploadMessage" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Processing...</p>
+      </div>
 
       <div style="margin-top: 20px; display: flex; gap: 12px;">
         <button class="btn btn-primary btn-full" id="submitInputBtn">
@@ -792,6 +914,9 @@
   </script>
   <script src="https://widget.userjot.com/widget.js" async></script>
 
+  <!-- Audio Recorder for voice input -->
+  <script src="/audio-recorder.js"></script>
+
   <script src="/ai.js"></script>
 
   <!-- Mobile Menu Toggle Script (Lightweight - ~100 bytes) -->
@@ -882,6 +1007,162 @@
                 console.error('submitInput function not available');
               }
             }, 100);
+          }
+        }
+
+        // ============================================
+        // AUDIO RECORDING FUNCTIONALITY
+        // ============================================
+        const micButton = document.getElementById('micButton');
+        const recordingControls = document.getElementById('recordingControls');
+        const recordingTimer = document.getElementById('recordingTimer');
+        const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+        const cancelRecordingBtn = document.getElementById('cancelRecordingBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const uploadMessage = document.getElementById('uploadMessage');
+        const userInput = document.getElementById('userInput');
+
+        let recorder = null;
+        let recordingTimerInterval = null;
+
+        if (micButton) {
+          // Start recording when mic button is clicked
+          micButton.addEventListener('click', async () => {
+            // Check if browser supports recording
+            if (!AudioRecorder.isRecordingSupported()) {
+              alert('Audio recording is not supported in your browser. Please use Chrome, Firefox, or Edge.');
+              return;
+            }
+
+            try {
+              // Check if AudioRecorder is available
+              if (typeof AudioRecorder === 'undefined') {
+                throw new Error('AudioRecorder class not loaded. Please refresh the page.');
+              }
+
+              // Create new recorder instance
+              recorder = new AudioRecorder({
+                maxSizeMB: 25,
+                maxDurationSeconds: 600, // 10 minutes
+                onProgress: (progress) => {
+                  if (progress.status === 'uploading') {
+                    uploadProgress.style.width = '25%';
+                    uploadMessage.textContent = 'Uploading audio...';
+                  } else if (progress.status === 'transcribing') {
+                    uploadProgress.style.width = '75%';
+                    uploadMessage.textContent = 'Transcribing audio...';
+                  }
+                }
+              });
+
+              // Start recording
+              await recorder.startRecording();
+
+              // Update UI to show recording state
+              micButton.classList.add('recording');
+              recordingControls.classList.remove('hidden');
+              recordingTimer.textContent = 'Recording: 0:00';
+
+              // Update timer every second
+              recordingTimerInterval = setInterval(() => {
+                const duration = recorder.getRecordingDuration();
+                recordingTimer.textContent = `Recording: ${AudioRecorder.formatDuration(duration)}`;
+              }, 1000);
+
+            } catch (error) {
+              console.error('Recording start error:', error);
+              alert('Failed to start recording: ' + error.message);
+            }
+          });
+
+          // Stop recording and upload
+          if (stopRecordingBtn) {
+            stopRecordingBtn.addEventListener('click', async () => {
+              if (!recorder) return;
+
+              try {
+                // Clear timer
+                if (recordingTimerInterval) {
+                  clearInterval(recordingTimerInterval);
+                  recordingTimerInterval = null;
+                }
+
+                // Update UI - hide recording controls, show upload status
+                micButton.classList.remove('recording');
+                recordingControls.classList.add('hidden');
+                uploadStatus.classList.remove('hidden');
+                uploadProgress.style.width = '0%';
+                uploadMessage.textContent = 'Processing audio...';
+
+                // Stop recording
+                const audioBlob = await recorder.stopRecording();
+
+                // Upload and transcribe
+                uploadMessage.textContent = 'Uploading audio...';
+                const result = await recorder.uploadAndTranscribe(audioBlob, 'recording.webm');
+
+                // Success! Populate the textarea with transcribed text
+                userInput.value = result.text;
+
+                // Store metadata globally for later use
+                window.documentUploadMetadata = {
+                  ...result.metadata,
+                  inputType: 'audio'
+                };
+
+                // Show success message
+                uploadProgress.style.width = '100%';
+                const langName = result.metadata.detectedLanguage
+                  ? ` (${result.metadata.detectedLanguage.toUpperCase()})`
+                  : '';
+                uploadMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters${langName}`;
+                uploadMessage.style.color = '#10b981';
+
+                // Hide upload status after 2 seconds
+                setTimeout(() => {
+                  uploadStatus.classList.add('hidden');
+                  uploadMessage.style.color = 'var(--text-secondary)';
+                  recorder = null;
+                }, 2000);
+
+              } catch (error) {
+                console.error('Audio upload error:', error);
+
+                // Show error
+                uploadProgress.style.width = '0%';
+                uploadMessage.textContent = 'Error: ' + error.message;
+                uploadMessage.style.color = '#ef4444';
+
+                // Reset after 3 seconds
+                setTimeout(() => {
+                  uploadStatus.classList.add('hidden');
+                  uploadMessage.style.color = 'var(--text-secondary)';
+                  recorder = null;
+                }, 3000);
+              }
+            });
+          }
+
+          // Cancel recording
+          if (cancelRecordingBtn) {
+            cancelRecordingBtn.addEventListener('click', () => {
+              if (!recorder) return;
+
+              // Clear timer
+              if (recordingTimerInterval) {
+                clearInterval(recordingTimerInterval);
+                recordingTimerInterval = null;
+              }
+
+              // Cancel recording
+              recorder.cancelRecording();
+
+              // Reset UI
+              micButton.classList.remove('recording');
+              recordingControls.classList.add('hidden');
+              recorder = null;
+            });
           }
         }
 
