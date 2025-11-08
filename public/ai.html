@@ -241,27 +241,33 @@
       position: absolute;
       bottom: 12px;
       right: 12px;
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      border: 2px solid #e5e7eb;
-      background: white;
+      border: none;
+      background: var(--purple-primary);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s;
       z-index: 10;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
     }
 
     .mic-button:hover {
-      border-color: #6366f1;
-      background: #f8f9fa;
+      background: var(--purple-hover);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .mic-button svg {
+      color: white;
     }
 
     .mic-button.recording {
       background: #ef4444;
-      border-color: #ef4444;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
       animation: pulse 1.5s ease-in-out infinite;
     }
 
@@ -768,7 +774,7 @@
 
         <!-- Microphone button -->
         <button class="mic-button" id="micButton" type="button" title="Record audio">
-          <svg class="icon icon-md" style="color: #6b7280;">
+          <svg class="icon icon-md">
             <use href="#icon-mic"></use>
           </svg>
         </button>
