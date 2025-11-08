@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 const supabase = require('../config/supabase');
 const { requireAuthentication } = require('../middleware/auth');
 const { validate, aiSchemas, sanitizeForAI } = require('../utils/validation');
@@ -17,7 +18,12 @@ const mammoth = require('mammoth');
 
 // Inicializar cliente Anthropic
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: process.env.ANTHROPIC_API_KEY
+});
+
+// Initialize OpenAI client for Whisper API
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const MODEL = 'claude-sonnet-4-20250514';
@@ -782,6 +788,138 @@ router.post('/extract-text',
       res.status(500).json({
         success: false,
         error: 'Failed to extract text from document. Please try again.'
+      });
+    }
+  }
+);
+
+// ============================================
+// AUDIO TRANSCRIPTION
+// ============================================
+
+// Configure multer for audio uploads
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024 // 25MB max (Whisper API limit)
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'audio/webm',
+      'audio/mp3',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/m4a',
+      'audio/mp4',
+      'audio/x-m4a'
+    ];
+
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(webm|mp3|wav|m4a|mpeg)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported audio type. Please upload WEBM, MP3, WAV, or M4A'), false);
+    }
+  }
+});
+
+// Transcribe audio using OpenAI Whisper API
+router.post('/transcribe-audio',
+  requireAuthentication,
+  audioUpload.single('audio'),
+  async (req, res) => {
+    try {
+      const userId = req.auth.userId;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No audio file uploaded'
+        });
+      }
+
+      const fileName = req.file.originalname;
+      const fileSize = req.file.size;
+      const mimeType = req.file.mimetype;
+
+      console.log(`Transcribing audio: ${fileName} (${mimeType}, ${fileSize} bytes)`);
+
+      // Create a File-like object for OpenAI API
+      const audioFile = new File([req.file.buffer], fileName, { type: mimeType });
+
+      // Call OpenAI Whisper API
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        language: 'pt', // Portuguese - can be auto-detected or specified
+        response_format: 'verbose_json' // Get more metadata
+      });
+
+      const transcribedText = transcription.text.trim();
+
+      console.log(`Transcription successful: ${transcribedText.length} characters`);
+
+      // Estimate audio duration (rough estimate from file size)
+      // Average: ~1MB per minute for typical audio
+      const estimatedDuration = Math.round(fileSize / (1024 * 1024) * 60);
+
+      // Limit transcription length
+      let finalText = transcribedText;
+      const maxLength = 50000;
+      let wasTruncated = false;
+      if (finalText.length > maxLength) {
+        finalText = finalText.substring(0, maxLength);
+        wasTruncated = true;
+      }
+
+      // Track audio transcription usage
+      await supabase.from('usage_tracking').insert([{
+        user_id: userId,
+        prompt_type: 'audio_transcription',
+        tokens_used: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        cost_usd: 0.006 * (estimatedDuration / 60), // $0.006 per minute
+        conversation_id: null,
+        metadata: {
+          file_name: fileName,
+          file_size: fileSize,
+          mime_type: mimeType,
+          transcribed_length: finalText.length,
+          estimated_duration: estimatedDuration,
+          was_truncated: wasTruncated,
+          whisper_duration: transcription.duration || estimatedDuration
+        }
+      }]);
+
+      console.log(`Successfully transcribed ${finalText.length} characters from ${fileName}`);
+
+      res.json({
+        success: true,
+        text: finalText,
+        metadata: {
+          fileName: fileName,
+          fileSize: fileSize,
+          mimeType: mimeType,
+          transcribedLength: finalText.length,
+          duration: transcription.duration || estimatedDuration,
+          wasTruncated: wasTruncated
+        }
+      });
+
+    } catch (error) {
+      console.error('Audio transcription error:', error);
+
+      // Handle specific OpenAI errors
+      if (error.code === 'insufficient_quota') {
+        return res.status(503).json({
+          success: false,
+          error: 'Transcription service temporarily unavailable. Please try again later.'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to transcribe audio. Please try again.'
       });
     }
   }
