@@ -703,7 +703,7 @@
         }
 
         // ============================================
-        // AUDIO UPLOAD
+        // AUDIO RECORDING
         // ============================================
         const audioCard = document.getElementById('audioCard');
         const audioUpload = document.getElementById('audio-upload');
@@ -712,17 +712,21 @@
         const audioMessage = document.getElementById('audio-message');
         const audioStatus = document.getElementById('audio-status');
         const audioIcon = document.getElementById('audio-icon');
+        const audioControls = document.getElementById('audio-controls');
+        const stopRecordingBtn = document.getElementById('stop-recording-btn');
+        const cancelRecordingBtn = document.getElementById('cancel-recording-btn');
 
         if (audioCard && audioUpload) {
-          // Trigger file picker when card is clicked
-          audioCard.addEventListener('click', () => {
-            audioUpload.click();
-          });
+          let recorder = null;
+          let recordingTimer = null;
 
-          // Handle file selection
-          audioUpload.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+          // Start recording immediately when card is clicked
+          audioCard.addEventListener('click', async () => {
+            // Check if browser supports recording
+            if (!AudioRecorder.isRecordingSupported()) {
+              alert('Audio recording is not supported in your browser. Please use Chrome, Firefox, or Edge.');
+              return;
+            }
 
             try {
               // Check if AudioRecorder is available
@@ -730,18 +734,16 @@
                 throw new Error('AudioRecorder class not loaded. Please refresh the page.');
               }
 
-              // Show upload status
-              audioStatusContainer.classList.remove('hidden');
-              audioProgress.style.width = '0%';
-              audioMessage.textContent = 'Uploading audio...';
-              audioStatus.textContent = 'Processing audio...';
-              audioIcon.style.color = 'var(--text-secondary)';
-
-              // Create AudioRecorder instance
-              const recorder = new AudioRecorder({
+              // Create new recorder instance
+              recorder = new AudioRecorder({
                 maxSizeMB: 25,
+                maxDurationSeconds: 600, // 10 minutes
                 onProgress: (progress) => {
-                  if (progress.status === 'uploading') {
+                  if (progress.status === 'recording') {
+                    // Update recording timer
+                    const duration = recorder.getRecordingDuration();
+                    audioMessage.textContent = `Recording: ${AudioRecorder.formatDuration(duration)}`;
+                  } else if (progress.status === 'uploading') {
                     audioProgress.style.width = '25%';
                     audioMessage.textContent = 'Uploading audio...';
                   } else if (progress.status === 'transcribing') {
@@ -752,49 +754,117 @@
                 }
               });
 
-              // Upload and transcribe
-              const result = await recorder.uploadAndTranscribe(file);
+              // Start recording
+              await recorder.startRecording();
 
-              // Success! Store the transcribed text and metadata
-              sessionStorage.setItem('documentText', result.text); // Reuse documentText for consistency
-              sessionStorage.setItem('documentMetadata', JSON.stringify({
-                ...result.metadata,
-                inputType: 'audio'
-              }));
+              // Update UI to show recording state
+              audioStatus.textContent = 'Recording...';
+              audioIcon.style.color = '#ef4444'; // Red icon while recording
+              audioControls.classList.remove('hidden');
+              audioStatusContainer.classList.remove('hidden');
+              audioProgress.style.width = '0%';
+              audioMessage.textContent = 'Recording: 0:00';
 
-              // Show success message
-              audioProgress.style.width = '100%';
-              audioMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters`;
-              audioStatus.textContent = 'Transcription complete!';
-              audioIcon.style.color = '#10b981';
-
-              // Wait a bit then navigate to AI page
-              setTimeout(() => {
-                window.location.href = '/ai.html?source=document'; // Reuse document flow
-              }, 1500);
+              // Update timer every second
+              recordingTimer = setInterval(() => {
+                const duration = recorder.getRecordingDuration();
+                audioMessage.textContent = `Recording: ${AudioRecorder.formatDuration(duration)}`;
+              }, 1000);
 
             } catch (error) {
-              console.error('Audio upload error:', error);
-
-              // Show error
-              audioProgress.style.width = '0%';
-              audioMessage.textContent = 'Error: ' + error.message;
-              audioMessage.style.color = '#ef4444';
-              audioStatus.textContent = 'Upload failed';
-              audioIcon.style.color = '#ef4444';
-
-              // Reset after 3 seconds
-              setTimeout(() => {
-                audioStatusContainer.classList.add('hidden');
-                audioMessage.style.color = 'var(--text-secondary)';
-                audioStatus.textContent = 'Record or upload audio';
-                audioIcon.style.color = 'var(--purple-primary)';
-              }, 3000);
-            } finally {
-              // Reset file input
-              e.target.value = '';
+              console.error('Recording start error:', error);
+              alert('Failed to start recording: ' + error.message);
             }
           });
+
+          // Stop recording and upload
+          if (stopRecordingBtn) {
+            stopRecordingBtn.addEventListener('click', async () => {
+              if (!recorder) return;
+
+              try {
+                // Clear timer
+                if (recordingTimer) {
+                  clearInterval(recordingTimer);
+                  recordingTimer = null;
+                }
+
+                // Stop recording
+                const audioBlob = await recorder.stopRecording();
+
+                // Hide controls, show upload status
+                audioControls.classList.add('hidden');
+                audioProgress.style.width = '0%';
+                audioMessage.textContent = 'Uploading audio...';
+                audioStatus.textContent = 'Processing audio...';
+                audioIcon.style.color = 'var(--text-secondary)';
+
+                // Upload and transcribe
+                const result = await recorder.uploadAndTranscribe(audioBlob, 'recording.webm');
+
+                // Success! Store the transcribed text and metadata
+                sessionStorage.setItem('documentText', result.text);
+                sessionStorage.setItem('documentMetadata', JSON.stringify({
+                  ...result.metadata,
+                  inputType: 'audio'
+                }));
+
+                // Show success message
+                audioProgress.style.width = '100%';
+                audioMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters`;
+                audioStatus.textContent = 'Transcription complete!';
+                audioIcon.style.color = '#10b981';
+
+                // Wait a bit then navigate to AI page
+                setTimeout(() => {
+                  window.location.href = '/ai.html?source=document';
+                }, 1500);
+
+              } catch (error) {
+                console.error('Audio upload error:', error);
+
+                // Show error
+                audioProgress.style.width = '0%';
+                audioMessage.textContent = 'Error: ' + error.message;
+                audioMessage.style.color = '#ef4444';
+                audioStatus.textContent = 'Upload failed';
+                audioIcon.style.color = '#ef4444';
+
+                // Reset after 3 seconds
+                setTimeout(() => {
+                  audioStatusContainer.classList.add('hidden');
+                  audioControls.classList.add('hidden');
+                  audioMessage.style.color = 'var(--text-secondary)';
+                  audioStatus.textContent = 'Record or upload audio';
+                  audioIcon.style.color = 'var(--purple-primary)';
+                  recorder = null;
+                }, 3000);
+              }
+            });
+          }
+
+          // Cancel recording
+          if (cancelRecordingBtn) {
+            cancelRecordingBtn.addEventListener('click', () => {
+              if (!recorder) return;
+
+              // Clear timer
+              if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+              }
+
+              // Cancel recording
+              recorder.cancelRecording();
+
+              // Reset UI
+              audioStatusContainer.classList.add('hidden');
+              audioControls.classList.add('hidden');
+              audioStatus.textContent = 'Record or upload audio';
+              audioIcon.style.color = 'var(--purple-primary)';
+              recorder = null;
+            });
+          }
         }
       } catch (error) {
         console.error('Error initializing:', error);
