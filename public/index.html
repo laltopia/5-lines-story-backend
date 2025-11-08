@@ -419,15 +419,32 @@
         <p class="card-description">Paste or type content</p>
       </div>
 
-      <div class="card coming-soon" id="audioCard">
+      <div class="card" id="audioCard">
         <div class="card-icon">
-          <svg class="icon icon-xl" style="color: var(--text-secondary);">
+          <svg class="icon icon-xl" id="audio-icon" style="color: var(--purple-primary);">
             <use href="#icon-mic"></use>
           </svg>
         </div>
         <h3 class="card-title">Audio</h3>
-        <p class="card-description">Record your voice</p>
-        <span class="badge">Coming Soon</span>
+        <p class="card-description" id="audio-status">Record or upload audio</p>
+
+        <!-- Recording/Upload status (initially hidden) -->
+        <div class="upload-status hidden" id="audio-status-container" style="margin-top: 16px; width: 100%;">
+          <div style="background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden;">
+            <div id="audio-progress" style="background: var(--purple-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+          <p id="audio-message" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Processing...</p>
+        </div>
+
+        <!-- Recording controls (initially hidden) -->
+        <div class="hidden" id="audio-controls" style="margin-top: 16px; display: flex; gap: 8px; justify-content: center;">
+          <button id="stop-recording-btn" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Stop Recording
+          </button>
+          <button id="cancel-recording-btn" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Cancel
+          </button>
+        </div>
       </div>
 
       <div class="card" id="documentCard">
@@ -449,10 +466,15 @@
       </div>
     </div>
 
-    <!-- Hidden file input -->
+    <!-- Hidden file inputs -->
     <input type="file"
            id="document-upload"
            accept=".pdf,.doc,.docx,.txt"
+           style="display: none;">
+
+    <input type="file"
+           id="audio-upload"
+           accept=".webm,.mp3,.wav,.m4a,.mpeg,audio/*"
            style="display: none;">
   </main>
 
@@ -507,6 +529,9 @@
 
   <!-- FileUploader Class for Document Uploads -->
   <script src="/file-uploader.js"></script>
+
+  <!-- AudioRecorder Class for Audio Recording/Upload -->
+  <script src="/audio-recorder.js"></script>
 
   <!-- UserJot Widget Script -->
   <script>
@@ -677,6 +702,101 @@
                 uploadMessage.style.color = 'var(--text-secondary)';
                 docStatus.textContent = 'Upload PDF, DOC, DOCX, TXT';
                 docIcon.style.color = 'var(--purple-primary)';
+              }, 3000);
+            } finally {
+              // Reset file input
+              e.target.value = '';
+            }
+          });
+        }
+
+        // ============================================
+        // AUDIO UPLOAD
+        // ============================================
+        const audioCard = document.getElementById('audioCard');
+        const audioUpload = document.getElementById('audio-upload');
+        const audioStatusContainer = document.getElementById('audio-status-container');
+        const audioProgress = document.getElementById('audio-progress');
+        const audioMessage = document.getElementById('audio-message');
+        const audioStatus = document.getElementById('audio-status');
+        const audioIcon = document.getElementById('audio-icon');
+
+        if (audioCard && audioUpload) {
+          // Trigger file picker when card is clicked
+          audioCard.addEventListener('click', () => {
+            audioUpload.click();
+          });
+
+          // Handle file selection
+          audioUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+              // Check if AudioRecorder is available
+              if (typeof AudioRecorder === 'undefined') {
+                throw new Error('AudioRecorder class not loaded. Please refresh the page.');
+              }
+
+              // Show upload status
+              audioStatusContainer.classList.remove('hidden');
+              audioProgress.style.width = '0%';
+              audioMessage.textContent = 'Uploading audio...';
+              audioStatus.textContent = 'Processing audio...';
+              audioIcon.style.color = 'var(--text-secondary)';
+
+              // Create AudioRecorder instance
+              const recorder = new AudioRecorder({
+                maxSizeMB: 25,
+                onProgress: (progress) => {
+                  if (progress.status === 'uploading') {
+                    audioProgress.style.width = '25%';
+                    audioMessage.textContent = 'Uploading audio...';
+                  } else if (progress.status === 'transcribing') {
+                    audioProgress.style.width = '75%';
+                    audioMessage.textContent = 'Transcribing audio...';
+                    audioStatus.textContent = 'Transcribing...';
+                  }
+                }
+              });
+
+              // Upload and transcribe
+              const result = await recorder.uploadAndTranscribe(file);
+
+              // Success! Store the transcribed text and metadata
+              sessionStorage.setItem('documentText', result.text); // Reuse documentText for consistency
+              sessionStorage.setItem('documentMetadata', JSON.stringify({
+                ...result.metadata,
+                inputType: 'audio'
+              }));
+
+              // Show success message
+              audioProgress.style.width = '100%';
+              audioMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters`;
+              audioStatus.textContent = 'Transcription complete!';
+              audioIcon.style.color = '#10b981';
+
+              // Wait a bit then navigate to AI page
+              setTimeout(() => {
+                window.location.href = '/ai.html?source=document'; // Reuse document flow
+              }, 1500);
+
+            } catch (error) {
+              console.error('Audio upload error:', error);
+
+              // Show error
+              audioProgress.style.width = '0%';
+              audioMessage.textContent = 'Error: ' + error.message;
+              audioMessage.style.color = '#ef4444';
+              audioStatus.textContent = 'Upload failed';
+              audioIcon.style.color = '#ef4444';
+
+              // Reset after 3 seconds
+              setTimeout(() => {
+                audioStatusContainer.classList.add('hidden');
+                audioMessage.style.color = 'var(--text-secondary)';
+                audioStatus.textContent = 'Record or upload audio';
+                audioIcon.style.color = 'var(--purple-primary)';
               }, 3000);
             } finally {
               // Reset file input
