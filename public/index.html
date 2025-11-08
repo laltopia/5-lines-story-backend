@@ -809,9 +809,12 @@
                   inputType: 'audio'
                 }));
 
-                // Show success message
+                // Show success message with detected language
                 audioProgress.style.width = '100%';
-                audioMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters`;
+                const langName = result.metadata.detectedLanguage
+                  ? ` (${result.metadata.detectedLanguage.toUpperCase()})`
+                  : '';
+                audioMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters${langName}`;
                 audioStatus.textContent = 'Transcription complete!';
                 audioIcon.style.color = '#10b981';
 

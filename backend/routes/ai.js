@@ -847,16 +847,18 @@ router.post('/transcribe-audio',
       const audioFile = new File([req.file.buffer], fileName, { type: mimeType });
 
       // Call OpenAI Whisper API
+      // Note: Removed 'language' parameter to enable auto-detection
+      // Whisper will automatically detect the spoken language and transcribe accordingly
       const transcription = await openai.audio.transcriptions.create({
         file: audioFile,
         model: 'whisper-1',
-        language: 'pt', // Portuguese - can be auto-detected or specified
-        response_format: 'verbose_json' // Get more metadata
+        response_format: 'verbose_json' // Get more metadata including detected language
       });
 
       const transcribedText = transcription.text.trim();
+      const detectedLanguage = transcription.language; // Whisper auto-detected language
 
-      console.log(`Transcription successful: ${transcribedText.length} characters`);
+      console.log(`Transcription successful: ${transcribedText.length} characters (detected language: ${detectedLanguage})`);
 
       // Estimate audio duration (rough estimate from file size)
       // Average: ~1MB per minute for typical audio
@@ -887,7 +889,8 @@ router.post('/transcribe-audio',
           transcribed_length: finalText.length,
           estimated_duration: estimatedDuration,
           was_truncated: wasTruncated,
-          whisper_duration: transcription.duration || estimatedDuration
+          whisper_duration: transcription.duration || estimatedDuration,
+          detected_language: detectedLanguage // Track detected language for analytics
         }
       }]);
 
@@ -902,7 +905,8 @@ router.post('/transcribe-audio',
           mimeType: mimeType,
           transcribedLength: finalText.length,
           duration: transcription.duration || estimatedDuration,
-          wasTruncated: wasTruncated
+          wasTruncated: wasTruncated,
+          detectedLanguage: detectedLanguage // Return detected language to frontend
         }
       });
 
