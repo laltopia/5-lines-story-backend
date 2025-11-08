@@ -36,13 +36,13 @@ const aiSchemas = {
   suggestPaths: Joi.object({
     userInput: Joi.string()
       .min(10)
-      .max(5000)
+      .max(50000) // Increased for document support (was 5000)
       .trim()
       .required()
       .messages({
         'string.empty': 'Story idea is required',
         'string.min': 'Story idea must be at least 10 characters long',
-        'string.max': 'Story idea cannot exceed 5000 characters',
+        'string.max': 'Story idea cannot exceed 50,000 characters',
         'any.required': 'Story idea is required'
       })
   }),
@@ -50,13 +50,13 @@ const aiSchemas = {
   generateStory: Joi.object({
     userInput: Joi.string()
       .min(10)
-      .max(5000)
+      .max(50000) // Increased for document support (was 5000)
       .trim()
       .required()
       .messages({
         'string.empty': 'Story idea is required',
         'string.min': 'Story idea must be at least 10 characters long',
-        'string.max': 'Story idea cannot exceed 5000 characters',
+        'string.max': 'Story idea cannot exceed 50,000 characters',
         'any.required': 'Story idea is required'
       }),
     selectedPath: Joi.object({
