@@ -20,6 +20,13 @@ const aiRouter = require('./routes/ai');
 const app = express();
 
 // ============================================
+// TRUST PROXY (Required for Render, Heroku, etc.)
+// ============================================
+// Enable trust proxy to correctly identify client IPs behind reverse proxies
+// This is essential for rate limiting and IP-based features to work correctly
+app.set('trust proxy', 1);
+
+// ============================================
 // SECURITY MIDDLEWARE
 // ============================================
 
