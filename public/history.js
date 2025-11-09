@@ -190,6 +190,7 @@ function renderStories(stories) {
     // Get story level (default to 5 if not set)
     const storyLevel = story.story_level || 5;
     const lineCount = Object.keys(aiResponse).length;
+    const nextLevel = getNextLevel(storyLevel);
 
     // Get level badge color
     const getLevelBadgeColor = (level) => {
@@ -221,6 +222,13 @@ function renderStories(stories) {
             </div>
           </div>
           <div class="story-actions">
+            ${nextLevel ? `
+              <button class="icon-button expand-btn" data-story-id="${story.id}" title="Expand to ${getLevelLabel(nextLevel)}">
+                <svg class="icon">
+                  <use href="#icon-sparkles"></use>
+                </svg>
+              </button>
+            ` : ''}
             <button class="icon-button share-btn" data-story-id="${story.id}" title="Share">
               <svg class="icon">
                 <use href="#icon-share"></use>
@@ -276,6 +284,21 @@ function attachStoryCardListeners() {
 
   // Event delegation: single listener on grid for all story cards and buttons
   grid.addEventListener('click', (e) => {
+    // Check if clicked on expand button
+    const expandBtn = e.target.closest('.expand-btn');
+    if (expandBtn) {
+      e.stopPropagation(); // Don't trigger card click
+      const storyId = expandBtn.dataset.storyId;
+      // Set current story and show expansion modal
+      const story = appState.stories.find(s => s.id === storyId);
+      if (story) {
+        appState.currentStory = story;
+        console.log('Expand button clicked from story card, story:', storyId);
+        showExpansionModal();
+      }
+      return;
+    }
+
     // Check if clicked on share button
     const shareBtn = e.target.closest('.share-btn');
     if (shareBtn) {
