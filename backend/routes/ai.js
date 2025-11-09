@@ -311,6 +311,11 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
     // ============================================
     // STEP 4: Save story with expansion metadata
     // ============================================
+    console.log('Saving story to database with expansion support...');
+    console.log('Story level:', 5);
+    console.log('Accumulated metadata:', JSON.stringify(accumulatedMetadata, null, 2));
+    console.log('User inputs history:', JSON.stringify(userInputsHistory, null, 2));
+
     const { data: conversationData, error: convError } = await supabase
       .from('conversations')
       .insert([{
@@ -334,7 +339,17 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
       .select()
       .single();
 
-    if (convError) throw convError;
+    if (convError) {
+      console.error('❌ Error saving story to database:', convError);
+      console.error('Error details:', JSON.stringify(convError, null, 2));
+      throw convError;
+    }
+
+    console.log('✅ Story saved successfully with ID:', conversationData.id);
+    console.log('Saved story_level:', conversationData.story_level);
+    console.log('Saved parent_story_id:', conversationData.parent_story_id);
+    console.log('Saved accumulated_metadata:', !!conversationData.accumulated_metadata);
+    console.log('Saved user_inputs_history:', !!conversationData.user_inputs_history);
 
     // Prepare metadata for usage tracking
     const usageMetadata = originalFileInfo ? {
@@ -1263,6 +1278,11 @@ router.post('/expand-story', requireAuthentication, validate(aiSchemas.expandSto
     }
 
     // 13. Store expanded story as new conversation
+    console.log(`Saving expanded story to database (${currentLevel} → ${targetLevel})...`);
+    console.log('Parent story ID:', conversationId);
+    console.log('Target level:', targetLevel);
+    console.log('Story lines count:', Object.keys(storyLines).length);
+
     const { data: newConversation, error: insertError } = await supabase
       .from('conversations')
       .insert([{
@@ -1286,9 +1306,14 @@ router.post('/expand-story', requireAuthentication, validate(aiSchemas.expandSto
       .single();
 
     if (insertError) {
-      console.error('Error inserting expanded story:', insertError);
+      console.error('❌ Error inserting expanded story:', insertError);
+      console.error('Error details:', JSON.stringify(insertError, null, 2));
       throw insertError;
     }
+
+    console.log('✅ Expanded story saved successfully with ID:', newConversation.id);
+    console.log('Saved story_level:', newConversation.story_level);
+    console.log('Saved parent_story_id:', newConversation.parent_story_id);
 
     // 14. Track usage
     await supabase.from('usage_tracking').insert([{
