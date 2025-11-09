@@ -29,7 +29,11 @@ let appState = {
   currentStory: null,
   conversationId: null,
   editingLine: null,
-  editingOriginalContent: null // Guardar conteúdo original para cancelar
+  editingOriginalContent: null, // Guardar conteúdo original para cancelar
+  storyLevel: 5, // Current story level (5, 10, 15, or 20)
+  parentStoryId: null, // Parent story ID for lineage tracking
+  accumulatedMetadata: null, // Metadata extracted from user inputs
+  lineage: [] // Full story lineage (5→10→15→20)
 };
 
 // ============================================
@@ -467,6 +471,9 @@ async function generateStory() {
     if (data.success) {
       appState.currentStory = data.story;
       appState.conversationId = data.conversationId;
+      appState.storyLevel = data.storyLevel || 5;
+      appState.parentStoryId = data.parentStoryId || null;
+      appState.accumulatedMetadata = data.accumulatedMetadata || null;
       renderStory(data.story);
       await loadUsage();
 
@@ -496,23 +503,53 @@ async function generateStory() {
 // ============================================
 function renderStory(story) {
   const linesContainer = document.getElementById('storyLines');
+  const storyLinesCount = Object.keys(story).length;
 
-  const lineLabels = [
-    'Context / Initial Situation',
-    'Desire / Objective',
-    'Obstacle / Conflict',
-    'Action / Attempt',
-    'Result / Transformation'
-  ];
+  // Get line labels based on story level
+  const lineLabels = getLineLabels(storyLinesCount);
+
+  // Add story level badge and lineage visualization before the story
+  const storyHeader = `
+    <div style="margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+        <div style="
+          display: inline-block;
+          padding: 8px 16px;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          color: white;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        ">
+          ${getLevelLabel(appState.storyLevel)}
+        </div>
+        ${getNextLevel(appState.storyLevel) ? `
+          <button id="expand-story-btn" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
+            <svg class="icon icon-sm">
+              <use href="#icon-sparkles"></use>
+            </svg>
+            Expand to ${getLevelLabel(getNextLevel(appState.storyLevel))}
+          </button>
+        ` : `
+          <div style="padding: 8px 16px; background: #10b981; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">
+            ✓ Maximum Level Reached
+          </div>
+        `}
+      </div>
+      <div id="lineage-visualization"></div>
+    </div>
+  `;
 
   // Render HTML without onclick (CSP blocks it)
-  linesContainer.innerHTML = Object.keys(story).map((key, index) => {
+  linesContainer.innerHTML = storyHeader + Object.keys(story).map((key, index) => {
     const lineNumber = index + 1;
+    const label = lineLabels[index] || `Line ${lineNumber}`;
     return `
       <div class="story-line" id="line-container-${lineNumber}">
         <div class="line-label">
           <div class="line-number">${lineNumber}</div>
-          <span>${escapeHtml(lineLabels[index])}</span>
+          <span>${escapeHtml(label)}</span>
         </div>
         <div class="line-content editable" id="line-content-${lineNumber}" data-line="${lineNumber}">
           ${escapeHtml(story[key])}
@@ -523,7 +560,7 @@ function renderStory(story) {
 
   // CRITICAL: Attach click handlers via addEventListener (CSP compliant)
   console.log('Attaching click handlers to story lines...');
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= storyLinesCount; i++) {
     const lineElement = document.getElementById(`line-content-${i}`);
     if (lineElement) {
       lineElement.addEventListener('click', function() {
@@ -533,6 +570,42 @@ function renderStory(story) {
       console.log(`✓ Click handler attached to line ${i}`);
     }
   }
+
+  // Attach expand button handler
+  const expandBtn = document.getElementById('expand-story-btn');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', function() {
+      console.log('Expand story button clicked');
+      showExpansionModal();
+    });
+    console.log('✓ Expand story button handler attached');
+  }
+
+  // Load and render lineage visualization
+  loadStoryLineage();
+}
+
+/**
+ * Get line labels based on story level
+ */
+function getLineLabels(lineCount) {
+  // Labels for 5-line story
+  if (lineCount === 5) {
+    return [
+      'Context / Initial Situation',
+      'Desire / Objective',
+      'Obstacle / Conflict',
+      'Action / Attempt',
+      'Result / Transformation'
+    ];
+  }
+
+  // For 10, 15, 20 line stories, use beat labels
+  const labels = [];
+  for (let i = 1; i <= lineCount; i++) {
+    labels.push(`Line ${i}`);
+  }
+  return labels;
 }
 
 // ============================================
@@ -906,17 +979,448 @@ function shareStory() {
 }
 
 // ============================================
+// STORY EXPANSION FUNCTIONS
+// ============================================
+
+/**
+ * Get the next expansion level based on current level
+ */
+function getNextLevel(currentLevel) {
+  const levels = { 5: 10, 10: 15, 15: 20, 20: null };
+  return levels[currentLevel] || null;
+}
+
+/**
+ * Get level label for display
+ */
+function getLevelLabel(level) {
+  return `${level}-Line Story`;
+}
+
+/**
+ * Show expansion modal
+ */
+function showExpansionModal() {
+  if (!appState.conversationId) {
+    showNotification('Please create a story first before expanding it.', 'error');
+    return;
+  }
+
+  const nextLevel = getNextLevel(appState.storyLevel);
+  if (!nextLevel) {
+    showNotification('This story is already at the maximum level (20 lines).', 'info');
+    return;
+  }
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.id = 'expansion-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <h2 style="font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">
+        <svg class="icon icon-md" style="color: var(--purple-primary); vertical-align: middle;">
+          <use href="#icon-sparkles"></use>
+        </svg>
+        Expand Your Story
+      </h2>
+      <p style="font-size: 16px; color: #6b7280; margin-bottom: 24px;">
+        Expand from <strong>${getLevelLabel(appState.storyLevel)}</strong> to <strong>${getLevelLabel(nextLevel)}</strong>
+      </p>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">
+          What would you like to add to your story?
+        </label>
+        <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
+          Provide additional details, context, or direction for the expansion
+        </p>
+        <div class="input-container">
+          <textarea
+            id="expansion-input"
+            placeholder="Example: Add more details about the character's background and their motivations..."
+            style="width: 100%; min-height: 150px; padding: 16px; padding-bottom: 50px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; font-family: inherit; resize: vertical;"
+          ></textarea>
+
+          <!-- Microphone button for expansion -->
+          <button class="mic-button" id="expansion-mic-button" type="button" title="Record audio">
+            <svg class="icon icon-md">
+              <use href="#icon-mic"></use>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Recording controls for expansion (hidden by default) -->
+        <div class="recording-controls hidden" id="expansion-recording-controls">
+          <span class="recording-timer" id="expansion-recording-timer">Recording: 0:00</span>
+          <button class="stop-btn" id="expansion-stop-recording-btn">Stop</button>
+          <button class="cancel-btn" id="expansion-cancel-recording-btn">Cancel</button>
+        </div>
+
+        <!-- Upload status for expansion (hidden by default) -->
+        <div class="upload-status hidden" id="expansion-upload-status" style="margin-top: 16px; width: 100%;">
+          <div style="background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden;">
+            <div id="expansion-upload-progress" style="background: var(--purple-primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+          <p id="expansion-upload-message" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Processing...</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button id="cancel-expansion-btn" class="btn btn-secondary" style="flex: 1;">
+          Cancel
+        </button>
+        <button id="confirm-expansion-btn" class="btn btn-primary" style="flex: 2;">
+          <svg class="icon icon-md">
+            <use href="#icon-sparkles"></use>
+          </svg>
+          Expand Story
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Attach event listeners
+  const cancelBtn = document.getElementById('cancel-expansion-btn');
+  const confirmBtn = document.getElementById('confirm-expansion-btn');
+  const expansionInput = document.getElementById('expansion-input');
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => modal.remove());
+  }
+
+  // Click outside to close
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      const userInput = expansionInput.value.trim();
+      if (!userInput) {
+        showNotification('Please provide some input for the expansion', 'error');
+        return;
+      }
+
+      modal.remove();
+      await expandStory(userInput, nextLevel);
+    });
+  }
+
+  // Setup audio recording for expansion
+  setupExpansionAudioRecording();
+
+  expansionInput.focus();
+}
+
+/**
+ * Setup audio recording for expansion modal
+ */
+function setupExpansionAudioRecording() {
+  const micButton = document.getElementById('expansion-mic-button');
+  const recordingControls = document.getElementById('expansion-recording-controls');
+  const recordingTimer = document.getElementById('expansion-recording-timer');
+  const stopRecordingBtn = document.getElementById('expansion-stop-recording-btn');
+  const cancelRecordingBtn = document.getElementById('expansion-cancel-recording-btn');
+  const uploadStatus = document.getElementById('expansion-upload-status');
+  const uploadProgress = document.getElementById('expansion-upload-progress');
+  const uploadMessage = document.getElementById('expansion-upload-message');
+  const expansionInput = document.getElementById('expansion-input');
+
+  let recorder = null;
+  let recordingTimerInterval = null;
+
+  if (!micButton) return;
+
+  micButton.addEventListener('click', async () => {
+    if (!AudioRecorder.isRecordingSupported()) {
+      alert('Audio recording is not supported in your browser. Please use Chrome, Firefox, or Edge.');
+      return;
+    }
+
+    try {
+      if (typeof AudioRecorder === 'undefined') {
+        throw new Error('AudioRecorder class not loaded. Please refresh the page.');
+      }
+
+      recorder = new AudioRecorder({
+        maxSizeMB: 25,
+        maxDurationSeconds: 600,
+        onProgress: (progress) => {
+          if (progress.status === 'uploading') {
+            uploadProgress.style.width = '25%';
+            uploadMessage.textContent = 'Uploading audio...';
+          } else if (progress.status === 'transcribing') {
+            uploadProgress.style.width = '75%';
+            uploadMessage.textContent = 'Transcribing audio...';
+          }
+        }
+      });
+
+      await recorder.startRecording();
+      micButton.classList.add('recording');
+      recordingControls.classList.remove('hidden');
+      recordingTimer.textContent = 'Recording: 0:00';
+
+      recordingTimerInterval = setInterval(() => {
+        const duration = recorder.getRecordingDuration();
+        recordingTimer.textContent = `Recording: ${AudioRecorder.formatDuration(duration)}`;
+      }, 1000);
+
+    } catch (error) {
+      console.error('Recording start error:', error);
+      alert('Failed to start recording: ' + error.message);
+    }
+  });
+
+  if (stopRecordingBtn) {
+    stopRecordingBtn.addEventListener('click', async () => {
+      if (!recorder) return;
+
+      try {
+        if (recordingTimerInterval) {
+          clearInterval(recordingTimerInterval);
+          recordingTimerInterval = null;
+        }
+
+        micButton.classList.remove('recording');
+        recordingControls.classList.add('hidden');
+        uploadStatus.classList.remove('hidden');
+        uploadProgress.style.width = '0%';
+        uploadMessage.textContent = 'Processing audio...';
+
+        const audioBlob = await recorder.stopRecording();
+        uploadMessage.textContent = 'Uploading audio...';
+        const result = await recorder.uploadAndTranscribe(audioBlob, 'expansion-recording.webm');
+
+        expansionInput.value = result.text;
+
+        uploadProgress.style.width = '100%';
+        const langName = result.metadata.detectedLanguage
+          ? ` (${result.metadata.detectedLanguage.toUpperCase()})`
+          : '';
+        uploadMessage.textContent = `Transcribed ${result.metadata.transcribedLength} characters${langName}`;
+        uploadMessage.style.color = '#10b981';
+
+        setTimeout(() => {
+          uploadStatus.classList.add('hidden');
+          uploadMessage.style.color = 'var(--text-secondary)';
+          recorder = null;
+        }, 2000);
+
+      } catch (error) {
+        console.error('Audio upload error:', error);
+        uploadProgress.style.width = '0%';
+        uploadMessage.textContent = 'Error: ' + error.message;
+        uploadMessage.style.color = '#ef4444';
+
+        setTimeout(() => {
+          uploadStatus.classList.add('hidden');
+          uploadMessage.style.color = 'var(--text-secondary)';
+          recorder = null;
+        }, 3000);
+      }
+    });
+  }
+
+  if (cancelRecordingBtn) {
+    cancelRecordingBtn.addEventListener('click', () => {
+      if (!recorder) return;
+
+      if (recordingTimerInterval) {
+        clearInterval(recordingTimerInterval);
+        recordingTimerInterval = null;
+      }
+
+      recorder.cancelRecording();
+      micButton.classList.remove('recording');
+      recordingControls.classList.add('hidden');
+      recorder = null;
+    });
+  }
+}
+
+/**
+ * Expand story to next level
+ */
+async function expandStory(userInput, targetLevel) {
+  try {
+    // Show loading notification
+    showNotification(`Expanding your story to ${getLevelLabel(targetLevel)}... This may take 20-30 seconds.`, 'info');
+
+    const token = await window.Clerk.session.getToken();
+
+    const response = await fetchWithRetry('/api/ai/expand-story', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        conversationId: appState.conversationId,
+        targetLevel: targetLevel,
+        userInput: userInput,
+        inputType: 'text'
+      })
+    }, 3); // Allow more retries for expansion (can take longer)
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update app state with expanded story
+      appState.currentStory = data.story;
+      appState.conversationId = data.conversationId;
+      appState.storyLevel = data.storyLevel || targetLevel;
+      appState.parentStoryId = data.parentStoryId || null;
+      appState.accumulatedMetadata = data.accumulatedMetadata || null;
+
+      // Re-render story with new level
+      renderStory(data.story);
+      await loadUsage();
+
+      showNotification(`Story successfully expanded to ${getLevelLabel(targetLevel)}! 🎉`, 'success');
+    } else {
+      const errorMsg = data.error || 'Error expanding story';
+      showNotification(errorMsg, 'error');
+    }
+  } catch (error) {
+    console.error('Error expanding story:', error);
+    const errorMessage = handleApiError(error, 'expanding story');
+    showNotification(errorMessage, 'error');
+  }
+}
+
+/**
+ * Load story lineage (all expansion levels)
+ */
+async function loadStoryLineage() {
+  if (!appState.conversationId) return;
+
+  try {
+    const token = await window.Clerk.session.getToken();
+
+    const response = await fetchWithRetry(`/api/ai/story-lineage/${appState.conversationId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      appState.lineage = data.lineage || [];
+      renderLineageVisualization();
+    }
+  } catch (error) {
+    console.error('Error loading lineage:', error);
+  }
+}
+
+/**
+ * Render lineage visualization
+ */
+function renderLineageVisualization() {
+  const lineageContainer = document.getElementById('lineage-visualization');
+  if (!lineageContainer || appState.lineage.length === 0) return;
+
+  const levels = [5, 10, 15, 20];
+  const lineageByLevel = {};
+
+  // Group lineage by level
+  appState.lineage.forEach(story => {
+    lineageByLevel[story.story_level] = story;
+  });
+
+  lineageContainer.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0;">
+      ${levels.map(level => {
+        const story = lineageByLevel[level];
+        const isActive = level === appState.storyLevel;
+        const isCompleted = story && level < appState.storyLevel;
+        const isAvailable = story !== undefined;
+
+        return `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="
+              padding: 8px 16px;
+              border-radius: 8px;
+              font-size: 14px;
+              font-weight: 600;
+              ${isActive ? 'background: #6366f1; color: white;' :
+                isCompleted ? 'background: #10b981; color: white;' :
+                isAvailable ? 'background: #e5e7eb; color: #6b7280; cursor: pointer;' :
+                'background: #f3f4f6; color: #9ca3af;'}
+              transition: all 0.2s;
+            " ${isAvailable && !isActive ? `onclick="loadStoryVersion('${story.id}')"` : ''}>
+              ${level} Lines
+            </div>
+            ${level < 20 ? '<span style="color: #9ca3af;">→</span>' : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Load a specific story version from lineage
+ */
+async function loadStoryVersion(conversationId) {
+  try {
+    const token = await window.Clerk.session.getToken();
+
+    const response = await fetchWithRetry(`/api/ai/conversation/${conversationId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.conversation) {
+      const conversation = data.conversation;
+      const aiResponse = JSON.parse(conversation.ai_response);
+
+      appState.currentStory = aiResponse;
+      appState.conversationId = conversation.id;
+      appState.storyLevel = conversation.story_level || 5;
+      appState.parentStoryId = conversation.parent_story_id || null;
+      appState.accumulatedMetadata = conversation.accumulated_metadata || null;
+
+      renderStory(aiResponse);
+      showNotification(`Loaded ${getLevelLabel(appState.storyLevel)}`, 'info');
+    }
+  } catch (error) {
+    console.error('Error loading story version:', error);
+    showNotification('Error loading story version', 'error');
+  }
+}
+
+// ============================================
 // KEYBOARD SHORTCUTS
 // ============================================
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && appState.editingLine) {
     cancelEdit();
   }
-  
+
   if (e.ctrlKey && e.key === 'Enter' && appState.editingLine) {
     saveEditDirectly(true);
   }
-  
+
   if (e.ctrlKey && e.shiftKey && e.key === 'Enter' && appState.editingLine) {
     saveEditWithAI();
   }

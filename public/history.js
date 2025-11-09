@@ -168,10 +168,39 @@ function renderStories(stories) {
     // Get title or fallback to first 50 chars of first line
     const title = story.title || Object.values(aiResponse)[0]?.substring(0, 50) + '...' || 'Untitled Story';
 
+    // Get story level (default to 5 if not set)
+    const storyLevel = story.story_level || 5;
+    const lineCount = Object.keys(aiResponse).length;
+
+    // Get level badge color
+    const getLevelBadgeColor = (level) => {
+      const colors = {
+        5: 'background: linear-gradient(135deg, #6366f1, #8b5cf6);',
+        10: 'background: linear-gradient(135deg, #10b981, #059669);',
+        15: 'background: linear-gradient(135deg, #f59e0b, #d97706);',
+        20: 'background: linear-gradient(135deg, #ef4444, #dc2626);'
+      };
+      return colors[level] || colors[5];
+    };
+
     return `
       <div class="story-card" data-story-id="${story.id}">
         <div class="story-header">
-          <div class="story-date">${escapeHtml(date)}</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="story-date">${escapeHtml(date)}</div>
+            <div style="
+              display: inline-block;
+              padding: 4px 10px;
+              ${getLevelBadgeColor(storyLevel)}
+              color: white;
+              border-radius: 6px;
+              font-size: 11px;
+              font-weight: 600;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            ">
+              ${storyLevel} Lines
+            </div>
+          </div>
           <div class="story-actions">
             <button class="icon-button share-btn" data-story-id="${story.id}" title="Share">
               <svg class="icon">
@@ -199,12 +228,12 @@ function renderStories(stories) {
               <div class="line-text">${escapeHtml(value)}</div>
             </div>
           `).join('')}
-          ${Object.keys(aiResponse).length > 3 ? '<div style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 8px;">... +2 more lines</div>' : ''}
+          ${lineCount > 3 ? `<div style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 8px;">... +${lineCount - 3} more lines</div>` : ''}
         </div>
 
         <div class="story-footer">
           <span>${story.tokens_used} tokens</span>
-          <span>5 lines</span>
+          <span>${lineCount} lines total</span>
         </div>
       </div>
     `;
