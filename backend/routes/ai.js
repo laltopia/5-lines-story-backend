@@ -8,7 +8,11 @@ const { validate, aiSchemas, sanitizeForAI } = require('../utils/validation');
 const {
   getPrompt,
   detectLanguage,
-  estimateTokens
+  estimateTokens,
+  getExpansionPrompt,
+  getBeatDistribution,
+  validateExpansionPath,
+  getNextExpansionLevel
 } = require('../config/prompts');
 
 // Document parsing libraries
@@ -928,5 +932,526 @@ router.post('/transcribe-audio',
     }
   }
 );
+
+// ============================================
+// ENDPOINT 9: Extract Metadata from User Input (PROTECTED + VALIDATED)
+// ============================================
+router.post('/extract-metadata', requireAuthentication, validate(aiSchemas.extractMetadata), async (req, res) => {
+  try {
+    const { userInput, existingMetadata, storyLevel, language } = req.body;
+    const userId = req.auth.userId;
+
+    await ensureUserTracking(userId);
+
+    // Sanitize input
+    const sanitizedInput = sanitizeForAI(userInput);
+
+    // Build prompt for metadata extraction
+    const systemPrompt = getPrompt('extract_metadata');
+    const userMessage = `USER'S INPUT:\n${sanitizedInput}\n\nEXISTING METADATA (from previous inputs):\n${JSON.stringify(existingMetadata || {}, null, 2)}`;
+
+    const { content, usage } = await callClaude(systemPrompt, userMessage);
+
+    let extractedMetadata;
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      extractedMetadata = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+    } catch (parseError) {
+      console.error('Metadata extraction parsing error:', parseError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to extract metadata. Please try again.'
+      });
+    }
+
+    // Merge with existing metadata
+    const mergedMetadata = {
+      characters: [
+        ...(existingMetadata?.characters || []),
+        ...(extractedMetadata.newCharacters || [])
+      ],
+      settings: [
+        ...(existingMetadata?.settings || []),
+        ...(extractedMetadata.newSettings || [])
+      ],
+      keyFacts: [
+        ...(existingMetadata?.keyFacts || []),
+        ...(extractedMetadata.newFacts || [])
+      ],
+      emotionalThemes: [
+        ...(existingMetadata?.emotionalThemes || []),
+        ...(extractedMetadata.newEmotionalThemes || [])
+      ],
+      tone: extractedMetadata.tone || existingMetadata?.tone,
+      language: language || detectLanguage(sanitizedInput)
+    };
+
+    const totalTokens = usage.input_tokens + usage.output_tokens;
+    const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
+
+    // Track usage
+    await supabase.from('usage_tracking').insert([{
+      user_id: userId,
+      prompt_type: 'extract_metadata',
+      tokens_used: totalTokens,
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+      cost_usd: costUsd,
+      metadata: {
+        story_level: storyLevel,
+        extraction_type: 'user_input'
+      }
+    }]);
+
+    await updateTokenUsage(userId, totalTokens);
+
+    res.json({
+      success: true,
+      extractedMetadata: extractedMetadata,
+      mergedMetadata: mergedMetadata,
+      usage: {
+        tokensUsed: totalTokens,
+        inputTokens: usage.input_tokens,
+        outputTokens: usage.output_tokens,
+        costUsd: costUsd.toFixed(6)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in extract-metadata:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to extract metadata. Please try again later.'
+    });
+  }
+});
+
+// ============================================
+// ENDPOINT 10: Expand Story (5→10, 10→15, 15→20) (PROTECTED + VALIDATED)
+// ============================================
+router.post('/expand-story', requireAuthentication, validate(aiSchemas.expandStory), async (req, res) => {
+  try {
+    const {
+      conversationId,
+      targetLevel,
+      userInput,
+      inputType,
+      originalFileInfo
+    } = req.body;
+
+    const userId = req.auth.userId;
+
+    await ensureUserTracking(userId);
+
+    // 1. Fetch current story and validate ownership
+    const { data: currentStory, error: fetchError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('id', conversationId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !currentStory) {
+      return res.status(404).json({
+        success: false,
+        error: 'Story not found or you do not have access to it.'
+      });
+    }
+
+    // 2. Validate expansion path (5→10, 10→15, 15→20 only)
+    const currentLevel = currentStory.story_level || 5;
+    if (!validateExpansionPath(currentLevel, targetLevel)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid expansion path. You can only expand from level ${currentLevel} to ${getNextExpansionLevel(currentLevel)}.`,
+        currentLevel,
+        allowedNextLevel: getNextExpansionLevel(currentLevel)
+      });
+    }
+
+    // 3. Check if expansion already exists
+    const { data: existingExpansion } = await supabase
+      .from('conversations')
+      .select('id, story_level')
+      .eq('parent_story_id', conversationId)
+      .eq('story_level', targetLevel)
+      .single();
+
+    if (existingExpansion) {
+      return res.status(409).json({
+        success: false,
+        error: `This story already has an expansion at level ${targetLevel}.`,
+        existingExpansionId: existingExpansion.id
+      });
+    }
+
+    // 4. Sanitize user input
+    const sanitizedInput = sanitizeForAI(userInput);
+
+    // 5. Extract metadata from new user input
+    const metadataPrompt = getPrompt('extract_metadata');
+    const existingMetadata = currentStory.accumulated_metadata || {};
+    const metadataUserMessage = `USER'S INPUT:\n${sanitizedInput}\n\nEXISTING METADATA:\n${JSON.stringify(existingMetadata, null, 2)}`;
+
+    const { content: metadataContent, usage: metadataUsage } = await callClaude(metadataPrompt, metadataUserMessage);
+
+    let extractedMetadata;
+    try {
+      const jsonMatch = metadataContent.match(/\{[\s\S]*\}/);
+      extractedMetadata = JSON.parse(jsonMatch ? jsonMatch[0] : metadataContent);
+    } catch (parseError) {
+      console.error('Metadata extraction error:', parseError);
+      extractedMetadata = { newCharacters: [], newSettings: [], newFacts: [], newEmotionalThemes: [] };
+    }
+
+    // 6. Merge metadata
+    const accumulatedMetadata = {
+      characters: [
+        ...(existingMetadata.characters || []),
+        ...(extractedMetadata.newCharacters || [])
+      ],
+      settings: [
+        ...(existingMetadata.settings || []),
+        ...(extractedMetadata.newSettings || [])
+      ],
+      keyFacts: [
+        ...(existingMetadata.keyFacts || []),
+        ...(extractedMetadata.newFacts || [])
+      ],
+      emotionalThemes: [
+        ...(existingMetadata.emotionalThemes || []),
+        ...(extractedMetadata.newEmotionalThemes || [])
+      ],
+      tone: extractedMetadata.tone || existingMetadata.tone,
+      language: existingMetadata.language || detectLanguage(sanitizedInput)
+    };
+
+    // 7. Get the original 5-line story (root of the lineage)
+    let original5LineStory = currentStory;
+    if (currentLevel !== 5 && currentStory.parent_story_id) {
+      // Traverse back to find the 5-line root
+      let tempId = currentStory.parent_story_id;
+      while (tempId) {
+        const { data: parentStory } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', tempId)
+          .single();
+
+        if (parentStory && parentStory.story_level === 5) {
+          original5LineStory = parentStory;
+          break;
+        }
+        tempId = parentStory?.parent_story_id;
+      }
+    }
+
+    // 8. Build expansion prompt
+    const expansionSystemPrompt = getExpansionPrompt(targetLevel);
+
+    let expansionUserMessage = `ORIGINAL 5-LINE STORY (Your North Star):\n`;
+    const original5Lines = JSON.parse(original5LineStory.ai_response);
+    Object.entries(original5Lines).forEach(([key, value]) => {
+      expansionUserMessage += `${key}: ${value}\n`;
+    });
+
+    if (currentLevel !== 5) {
+      expansionUserMessage += `\n\nCURRENT ${currentLevel}-LINE STORY:\n`;
+      const currentLines = JSON.parse(currentStory.ai_response);
+      Object.entries(currentLines).forEach(([key, value]) => {
+        expansionUserMessage += `${key}: ${value}\n`;
+      });
+    }
+
+    expansionUserMessage += `\n\nUSER'S ACCUMULATED METADATA (From all their inputs - this is ground truth):\n${JSON.stringify(accumulatedMetadata, null, 2)}`;
+    expansionUserMessage += `\n\nUSER'S NEW EXPANSION REQUEST:\n${sanitizedInput}`;
+
+    // 9. Generate expanded story
+    const { content: expansionContent, usage: expansionUsage } = await callClaude(expansionSystemPrompt, expansionUserMessage);
+
+    let expandedStory;
+    try {
+      const jsonMatch = expansionContent.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : expansionContent);
+      expandedStory = parsed;
+    } catch (parseError) {
+      console.error('Expansion parsing error:', parseError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate expanded story. Please try again.'
+      });
+    }
+
+    // 10. Update user inputs history
+    const userInputsHistory = currentStory.user_inputs_history || [];
+    const newInputEntry = {
+      inputNumber: userInputsHistory.length + 1,
+      storyLevel: targetLevel,
+      rawInput: userInput,
+      inputType: inputType || 'text',
+      extractedMetadata: extractedMetadata,
+      timestamp: new Date().toISOString()
+    };
+    userInputsHistory.push(newInputEntry);
+
+    // 11. Calculate costs
+    const metadataCost = calculateCost(metadataUsage.input_tokens, metadataUsage.output_tokens);
+    const expansionCost = calculateCost(expansionUsage.input_tokens, expansionUsage.output_tokens);
+    const totalCost = metadataCost + expansionCost;
+    const totalTokens = (metadataUsage.input_tokens + metadataUsage.output_tokens) +
+                       (expansionUsage.input_tokens + expansionUsage.output_tokens);
+
+    // 12. Extract story lines from expanded story
+    const storyLines = {};
+    for (let i = 1; i <= targetLevel; i++) {
+      storyLines[`line${i}`] = expandedStory[`line${i}`] || expandedStory.story?.[`line${i}`];
+    }
+
+    // 13. Store expanded story as new conversation
+    const { data: newConversation, error: insertError } = await supabase
+      .from('conversations')
+      .insert([{
+        user_id: userId,
+        user_input: userInput,
+        ai_response: JSON.stringify(storyLines),
+        title: `${currentStory.title || 'Story'} - ${targetLevel} lines`,
+        prompt_used: expansionSystemPrompt.substring(0, 500),
+        prompt_type: `expand_to_${targetLevel}`,
+        tokens_used: totalTokens,
+        input_tokens: metadataUsage.input_tokens + expansionUsage.input_tokens,
+        output_tokens: metadataUsage.output_tokens + expansionUsage.output_tokens,
+        input_type: inputType || 'text',
+        original_file_info: originalFileInfo || null,
+        story_level: targetLevel,
+        parent_story_id: conversationId,
+        accumulated_metadata: accumulatedMetadata,
+        user_inputs_history: userInputsHistory
+      }])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting expanded story:', insertError);
+      throw insertError;
+    }
+
+    // 14. Track usage
+    await supabase.from('usage_tracking').insert([{
+      user_id: userId,
+      conversation_id: newConversation.id,
+      prompt_type: `expand_to_${targetLevel}`,
+      tokens_used: totalTokens,
+      input_tokens: metadataUsage.input_tokens + expansionUsage.input_tokens,
+      output_tokens: metadataUsage.output_tokens + expansionUsage.output_tokens,
+      cost_usd: totalCost,
+      metadata: {
+        parent_story_id: conversationId,
+        from_level: currentLevel,
+        to_level: targetLevel,
+        input_type: inputType || 'text',
+        file_info: originalFileInfo
+      }
+    }]);
+
+    await incrementStoryCount(userId);
+    await updateTokenUsage(userId, totalTokens);
+
+    // 15. Return response
+    res.json({
+      success: true,
+      expandedStory: storyLines,
+      metadata: {
+        storyLevel: targetLevel,
+        parentStoryId: conversationId,
+        fromLevel: currentLevel,
+        distribution: getBeatDistribution(targetLevel).join('-'),
+        accumulatedMetadata: accumulatedMetadata,
+        language: accumulatedMetadata.language,
+        tone: expandedStory.metadata?.tone || accumulatedMetadata.tone
+      },
+      conversationId: newConversation.id,
+      usage: {
+        tokensUsed: totalTokens,
+        inputTokens: metadataUsage.input_tokens + expansionUsage.input_tokens,
+        outputTokens: metadataUsage.output_tokens + expansionUsage.output_tokens,
+        costUsd: totalCost.toFixed(6)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in expand-story:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to expand story. Please try again later.',
+      details: error.message
+    });
+  }
+});
+
+// ============================================
+// ENDPOINT 11: Get Story Lineage (PROTECTED)
+// ============================================
+router.get('/story-lineage/:conversationId', requireAuthentication, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.auth.userId;
+
+    // Verify the story belongs to the user
+    const { data: story, error: storyError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('id', conversationId)
+      .eq('user_id', userId)
+      .single();
+
+    if (storyError || !story) {
+      return res.status(404).json({
+        success: false,
+        error: 'Story not found or you do not have access to it.'
+      });
+    }
+
+    // Get complete lineage using the database function
+    const { data: lineageData, error: lineageError } = await supabase
+      .rpc('get_story_lineage', { story_id: conversationId });
+
+    if (lineageError) {
+      console.error('Lineage retrieval error:', lineageError);
+      // Fallback to manual traversal if function doesn't exist yet
+      const lineage = [];
+      let currentId = conversationId;
+      const visited = new Set();
+
+      // First, traverse up to root
+      const ancestors = [];
+      let tempId = story.parent_story_id;
+      while (tempId && !visited.has(tempId)) {
+        visited.add(tempId);
+        const { data: parentStory } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', tempId)
+          .eq('user_id', userId)
+          .single();
+
+        if (parentStory) {
+          ancestors.unshift(parentStory);
+          tempId = parentStory.parent_story_id;
+        } else {
+          break;
+        }
+      }
+
+      // Build lineage from root to current
+      lineage.push(...ancestors.map(s => ({
+        conversationId: s.id,
+        storyLevel: s.story_level || 5,
+        story: JSON.parse(s.ai_response),
+        userInput: s.user_input,
+        title: s.title,
+        accumulatedMetadata: s.accumulated_metadata,
+        userInputsHistory: s.user_inputs_history,
+        createdAt: s.created_at,
+        parentStoryId: s.parent_story_id
+      })));
+
+      lineage.push({
+        conversationId: story.id,
+        storyLevel: story.story_level || 5,
+        story: JSON.parse(story.ai_response),
+        userInput: story.user_input,
+        title: story.title,
+        accumulatedMetadata: story.accumulated_metadata,
+        userInputsHistory: story.user_inputs_history,
+        createdAt: story.created_at,
+        parentStoryId: story.parent_story_id
+      });
+
+      // Get children
+      const { data: children } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('parent_story_id', conversationId)
+        .eq('user_id', userId)
+        .order('story_level', { ascending: true });
+
+      if (children && children.length > 0) {
+        lineage.push(...children.map(c => ({
+          conversationId: c.id,
+          storyLevel: c.story_level || 5,
+          story: JSON.parse(c.ai_response),
+          userInput: c.user_input,
+          title: c.title,
+          accumulatedMetadata: c.accumulated_metadata,
+          userInputsHistory: c.user_inputs_history,
+          createdAt: c.created_at,
+          parentStoryId: c.parent_story_id
+        })));
+      }
+
+      const currentLevel = story.story_level || 5;
+      const nextLevel = getNextExpansionLevel(currentLevel);
+
+      return res.json({
+        success: true,
+        lineage: lineage,
+        currentLevel: currentLevel,
+        canExpandTo: nextLevel,
+        totalStories: lineage.length
+      });
+    }
+
+    // Process lineage data from database function
+    const processedLineage = lineageData.map(item => ({
+      conversationId: item.conversation_id,
+      storyLevel: item.story_level,
+      userInput: item.user_input,
+      createdAt: item.created_at,
+      parentStoryId: item.parent_id
+    }));
+
+    // Get full story details for each
+    const fullLineage = [];
+    for (const item of processedLineage) {
+      const { data: fullStory } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', item.conversationId)
+        .single();
+
+      if (fullStory) {
+        fullLineage.push({
+          conversationId: fullStory.id,
+          storyLevel: fullStory.story_level || 5,
+          story: JSON.parse(fullStory.ai_response),
+          userInput: fullStory.user_input,
+          title: fullStory.title,
+          accumulatedMetadata: fullStory.accumulated_metadata,
+          userInputsHistory: fullStory.user_inputs_history,
+          createdAt: fullStory.created_at,
+          parentStoryId: fullStory.parent_story_id
+        });
+      }
+    }
+
+    const currentLevel = story.story_level || 5;
+    const nextLevel = getNextExpansionLevel(currentLevel);
+
+    res.json({
+      success: true,
+      lineage: fullLineage,
+      currentLevel: currentLevel,
+      canExpandTo: nextLevel,
+      totalStories: fullLineage.length
+    });
+
+  } catch (error) {
+    console.error('Error in story-lineage:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve story lineage. Please try again later.'
+    });
+  }
+});
 
 module.exports = router;
