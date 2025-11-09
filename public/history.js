@@ -21,6 +21,25 @@ let appState = {
 };
 
 // ============================================
+// STORY EXPANSION HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Get the next expansion level based on current level
+ */
+function getNextLevel(currentLevel) {
+  const levels = { 5: 10, 10: 15, 15: 20, 20: null };
+  return levels[currentLevel] || null;
+}
+
+/**
+ * Get level label for display
+ */
+function getLevelLabel(level) {
+  return `${level}-Line Story`;
+}
+
+// ============================================
 // ERROR HANDLING & RETRY LOGIC
 // ============================================
 
@@ -339,6 +358,10 @@ function openStoryModal(storyId) {
   // Get title or fallback
   const title = story.title || Object.values(aiResponse)[0]?.substring(0, 50) + '...' || 'Untitled Story';
 
+  // Get story level (default to 5 if not set)
+  const storyLevel = story.story_level || 5;
+  const nextLevel = getNextLevel(storyLevel);
+
   document.getElementById('modalTitle').textContent = `Story from ${date}`;
 
   const modalBody = document.getElementById('modalBody');
@@ -367,6 +390,36 @@ function openStoryModal(storyId) {
           <button class="btn btn-secondary" id="cancelTitleBtn" style="padding: 8px 16px;">Cancel</button>
           <button class="btn btn-primary" id="saveTitleBtn" style="padding: 8px 16px;">Save</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Story Level and Expand Button -->
+    <div style="margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div style="
+          display: inline-block;
+          padding: 8px 16px;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          color: white;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        ">
+          ${getLevelLabel(storyLevel)}
+        </div>
+        ${nextLevel ? `
+          <button id="expand-story-modal-btn" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px; font-weight: 600;">
+            <svg class="icon icon-sm" style="vertical-align: middle;">
+              <use href="#icon-sparkles"></use>
+            </svg>
+            Expand to ${getLevelLabel(nextLevel)}
+          </button>
+        ` : `
+          <div style="padding: 8px 16px; background: #10b981; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">
+            ✓ Maximum Level Reached
+          </div>
+        `}
       </div>
     </div>
 
@@ -450,6 +503,15 @@ function attachModalEditListeners() {
 
   if (saveTitleBtn) {
     saveTitleBtn.addEventListener('click', () => saveTitle());
+  }
+
+  // Expand story button
+  const expandStoryBtn = document.getElementById('expand-story-modal-btn');
+  if (expandStoryBtn) {
+    expandStoryBtn.addEventListener('click', () => {
+      console.log('Expand story button clicked from modal');
+      showExpansionModal();
+    });
   }
 
   // Line editing (event delegation for all edit buttons)
@@ -812,10 +874,182 @@ style.textContent = `
 document.head.appendChild(style);
 
 // ============================================
+// STORY EXPANSION FUNCTIONS
+// ============================================
+
+/**
+ * Show expansion modal
+ */
+function showExpansionModal() {
+  if (!appState.currentStory) {
+    showNotification('Please select a story first before expanding it.', 'error');
+    return;
+  }
+
+  const storyLevel = appState.currentStory.story_level || 5;
+  const nextLevel = getNextLevel(storyLevel);
+
+  if (!nextLevel) {
+    showNotification('This story is already at the maximum level (20 lines).', 'info');
+    return;
+  }
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.id = 'expansion-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    padding: 20px;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <h2 style="font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">
+        <svg class="icon icon-md" style="color: var(--purple-primary); vertical-align: middle;">
+          <use href="#icon-sparkles"></use>
+        </svg>
+        Expand Your Story
+      </h2>
+      <p style="font-size: 16px; color: #6b7280; margin-bottom: 24px;">
+        Expand from <strong>${getLevelLabel(storyLevel)}</strong> to <strong>${getLevelLabel(nextLevel)}</strong>
+      </p>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px;">
+          What would you like to add to your story?
+        </label>
+        <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
+          Provide additional details, context, or direction for the expansion
+        </p>
+        <textarea
+          id="expansion-input"
+          placeholder="Example: Add more details about the character's background and their motivations..."
+          style="width: 100%; min-height: 150px; padding: 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 16px; font-family: inherit; resize: vertical;"
+        ></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button id="cancel-expansion-btn" class="btn btn-secondary" style="flex: 1;">
+          Cancel
+        </button>
+        <button id="confirm-expansion-btn" class="btn btn-primary" style="flex: 2;">
+          <svg class="icon icon-md">
+            <use href="#icon-sparkles"></use>
+          </svg>
+          Expand Story
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Attach event listeners
+  const cancelBtn = document.getElementById('cancel-expansion-btn');
+  const confirmBtn = document.getElementById('confirm-expansion-btn');
+  const expansionInput = document.getElementById('expansion-input');
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => modal.remove());
+  }
+
+  // Click outside to close
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      const userInput = expansionInput.value.trim();
+      if (!userInput) {
+        showNotification('Please provide some input for the expansion', 'error');
+        return;
+      }
+
+      modal.remove();
+      await expandStory(userInput, nextLevel);
+    });
+  }
+
+  expansionInput.focus();
+}
+
+/**
+ * Expand story to next level
+ */
+async function expandStory(userInput, targetLevel) {
+  if (!appState.currentStory) return;
+
+  try {
+    // Show loading notification
+    showNotification(`Expanding your story to ${getLevelLabel(targetLevel)}... This may take 20-30 seconds.`, 'info');
+
+    const token = await window.Clerk.session.getToken();
+
+    const response = await fetchWithRetry('/api/ai/expand-story', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        conversationId: appState.currentStory.id,
+        targetLevel: targetLevel,
+        userInput: userInput,
+        inputType: 'text'
+      })
+    }, 3); // Allow more retries for expansion (can take longer)
+
+    const data = await response.json();
+
+    if (data.success) {
+      showNotification(`Story successfully expanded to ${getLevelLabel(targetLevel)}! 🎉`, 'success');
+
+      // Close current modal
+      closeModal();
+
+      // Reload stories to get updated data
+      await loadStories();
+
+      // Reopen the story modal with expanded version
+      setTimeout(() => {
+        const updatedStory = appState.stories.find(s => s.id === data.conversationId);
+        if (updatedStory) {
+          openStoryModal(updatedStory.id);
+        }
+      }, 500);
+    } else {
+      const errorMsg = data.error || 'Error expanding story';
+      showNotification(errorMsg, 'error');
+    }
+  } catch (error) {
+    console.error('Error expanding story:', error);
+    const errorMessage = handleApiError(error, 'expanding story');
+    showNotification(errorMessage, 'error');
+  }
+}
+
+// ============================================
 // ATALHOS DE TECLADO
 // ============================================
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeModal();
+    // Also close expansion modal if open
+    const expansionModal = document.getElementById('expansion-modal');
+    if (expansionModal) {
+      expansionModal.remove();
+    }
   }
 });

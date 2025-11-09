@@ -469,11 +469,14 @@ async function generateStory() {
     setButtonLoading('generateStoryBtn', false);
 
     if (data.success) {
+      // Ensure story level is set (default to 5 for new stories)
+      const storyLevel = data.storyLevel || 5;
       appState.currentStory = data.story;
       appState.conversationId = data.conversationId;
-      appState.storyLevel = data.storyLevel || 5;
+      appState.storyLevel = storyLevel;
       appState.parentStoryId = data.parentStoryId || null;
       appState.accumulatedMetadata = data.accumulatedMetadata || null;
+      console.log('Story generated with level:', storyLevel);
       renderStory(data.story);
       await loadUsage();
 
@@ -508,7 +511,10 @@ function renderStory(story) {
   // Get line labels based on story level
   const lineLabels = getLineLabels(storyLinesCount);
 
-  // Add story level badge and lineage visualization before the story
+  // Add story level badge and expand button before the story
+  const nextLevel = getNextLevel(appState.storyLevel);
+  console.log('Rendering story header - Current level:', appState.storyLevel, 'Next level:', nextLevel);
+
   const storyHeader = `
     <div style="margin-bottom: 24px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
@@ -524,12 +530,12 @@ function renderStory(story) {
         ">
           ${getLevelLabel(appState.storyLevel)}
         </div>
-        ${getNextLevel(appState.storyLevel) ? `
-          <button id="expand-story-btn" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
-            <svg class="icon icon-sm">
+        ${nextLevel ? `
+          <button id="expand-story-btn" class="btn btn-primary" style="padding: 10px 20px; font-size: 14px; font-weight: 600;">
+            <svg class="icon icon-sm" style="vertical-align: middle;">
               <use href="#icon-sparkles"></use>
             </svg>
-            Expand to ${getLevelLabel(getNextLevel(appState.storyLevel))}
+            Expand to ${getLevelLabel(nextLevel)}
           </button>
         ` : `
           <div style="padding: 8px 16px; background: #10b981; color: white; border-radius: 12px; font-size: 14px; font-weight: 600;">
