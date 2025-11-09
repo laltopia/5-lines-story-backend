@@ -155,6 +155,336 @@ FORMATO DE RESPOSTA (JSON):
 Retorne APENAS o JSON, sem texto adicional.`;
 
 // ============================================
+// PROMPT: Extrair Metadata do Input do Usuário
+// ============================================
+const EXTRACT_USER_INPUT_METADATA_PROMPT = `You are analyzing a user's input to extract story metadata for the 5-Lines-Story methodology.
+
+CRITICAL: This is NOT an AI-generated story - this is what the USER is telling you they want in their story.
+
+EXTRACTION RULES:
+1. Extract ONLY information the user explicitly mentioned or clearly implied
+2. Do NOT infer, assume, or add information not present in the user's input
+3. Do NOT include anything from AI-generated stories
+4. Focus on concrete, factual information the user provided
+5. Identify which of the 5 beats (situation, desire, conflict, change, result) the user wants to expand
+
+RESPOND IN THIS JSON FORMAT:
+{
+  "newCharacters": [
+    {"name": "character name", "role": "protagonist|supporter|antagonist|etc", "traits": ["trait1", "trait2"]}
+  ],
+  "newSettings": [
+    {"location": "place", "timeframe": "time period", "context": "situational context"}
+  ],
+  "newFacts": [
+    "Concrete fact 1 from user input",
+    "Concrete fact 2 from user input"
+  ],
+  "newEmotionalThemes": [
+    "fear", "determination", "self-doubt", etc
+  ],
+  "expansionFocus": "situation|desire|conflict|change|result",
+  "specificAreas": ["aspect1 user wants to expand", "aspect2"],
+  "userDesires": ["what user explicitly requested"]
+}
+
+Return ONLY the JSON, no additional text.`;
+
+// ============================================
+// PROMPT: Expandir para 10 Linhas (3-2-3-2-1)
+// ============================================
+const EXPAND_TO_10_LINES_PROMPT = `You are expanding a 5-line story to 10 lines using the 5-Lines-Story methodology.
+
+CRITICAL PRINCIPLE: You are ZOOMING IN on the existing 5 beats, NOT adding new story beats.
+
+═══════════════════════════════════════════════════════════
+
+MANDATORY STRUCTURE - 10 LINES (3-2-3-2-1 distribution):
+
+**Lines 1-3: SITUATION (Zoom into original context/situation)**
+- Line 1: Establish identity/credentials mentioned by user
+- Line 2: Add backstory/history from user's metadata
+- Line 3: Bridge to current reality
+
+**Lines 4-5: DESIRE (Zoom into original desire/objective)**
+- Line 4: State core aspiration
+- Line 5: Clarify specific desire from user's input
+
+**Lines 6-8: CONFLICT (Zoom into original obstacle/conflict)** ← Gets most detail
+- Line 6: Introduce initial obstacle
+- Line 7: Add specific barriers/internal dialogue from user's metadata
+- Line 8: Peak conflict OR false resolution (OVERLAP: this line ends conflict and begins change)
+
+**Line 9: CHANGE (Zoom into original action/attempt)**
+- Line 9: The true realization/breakthrough
+
+**Line 10: RESULT (Zoom into original result/transformation)**
+- Line 10: Achievement shown + forward momentum
+
+═══════════════════════════════════════════════════════════
+
+CRITICAL RULES:
+
+1. ✅ ZOOM IN, don't add new beats
+   - Correct: Expanding "self-doubt" → "self-doubt → specific fears → internal voice → false relief"
+   - Wrong: Adding "then I met a mentor" (new event not in original)
+
+2. ✅ MAINTAIN CAUSAL FLOW
+   - Each line must flow naturally to the next
+   - Read lines 1-3 alone - they should tell a complete "situation" sub-story
+
+3. ✅ USE THE OVERLAP TECHNIQUE
+   - Line 8 should end the conflict AND hint at the change
+   - Example: "When I let go of trying to be perfect..." (ends struggle, begins shift)
+
+4. ✅ RESPECT USER METADATA
+   - If user mentioned "3 years of struggle" - include that
+   - If user mentioned a character name - use it
+   - DO NOT add details the user didn't provide
+
+5. ✅ KEEP EACH LINE: 15-35 words
+
+6. ✅ MAINTAIN SAME LANGUAGE & TONE as original 5-line story
+
+7. ✅ COMPRESSION TEST
+   - After writing, mentally compress back to 5 lines
+   - If you get a different core story, you've drifted
+
+═══════════════════════════════════════════════════════════
+
+RESPOND IN THIS JSON FORMAT:
+{
+  "line1": "...",
+  "line2": "...",
+  "line3": "...",
+  "line4": "...",
+  "line5": "...",
+  "line6": "...",
+  "line7": "...",
+  "line8": "...",
+  "line9": "...",
+  "line10": "...",
+  "metadata": {
+    "language": "pt|en|es|fr|de",
+    "tone": "inspirational|practical|emotional|etc",
+    "beatDistribution": {
+      "situation": [1,2,3],
+      "desire": [4,5],
+      "conflict": [6,7,8],
+      "change": [9],
+      "result": [10]
+    }
+  }
+}
+
+Return ONLY the JSON, no additional text.`;
+
+// ============================================
+// PROMPT: Expandir para 15 Linhas (3-3-5-2-2)
+// ============================================
+const EXPAND_TO_15_LINES_PROMPT = `You are expanding a story to 15 lines using the 5-Lines-Story methodology.
+
+CRITICAL PRINCIPLE: You are ZOOMING IN on the existing 5 beats, NOT adding new story beats.
+
+═══════════════════════════════════════════════════════════
+
+MANDATORY STRUCTURE - 15 LINES (3-3-5-2-2 distribution):
+
+**Lines 1-3: SITUATION**
+- Line 1: Who you are (identity)
+- Line 2: Where you come from (origin)
+- Line 3: Where you are now (present state)
+
+**Lines 4-6: DESIRE**
+- Line 4: Surface-level desire
+- Line 5: Deeper emotional want
+- Line 6: Specific vision of achievement
+
+**Lines 7-11: CONFLICT** ← 33% of lines, most detailed
+- Line 7: First attempt and failure
+- Line 8: Internal doubt emerges
+- Line 9: External barriers compound
+- Line 10: Specific fears articulated
+- Line 11: Breaking point/surrender (OVERLAP: begins change)
+
+**Lines 12-13: CHANGE**
+- Line 12: False change or temporary relief
+- Line 13: True insight/genuine breakthrough
+
+**Lines 14-15: RESULT**
+- Line 14: Immediate outcome/proof
+- Line 15: Larger impact/ongoing journey
+
+═══════════════════════════════════════════════════════════
+
+CRITICAL RULES:
+
+1. ✅ ZOOM IN, don't add new beats
+2. ✅ MAINTAIN CAUSAL FLOW within each beat
+3. ✅ USE OVERLAP TECHNIQUE (Line 11 ends conflict, begins change)
+4. ✅ RESPECT USER METADATA exclusively
+5. ✅ KEEP EACH LINE: 15-35 words
+6. ✅ CONFLICT GETS 5 LINES (33% of total) - this is intentional
+7. ✅ RESULT STAYS CONCISE (2 lines only)
+8. ✅ COMPRESSION TEST: Must compress back to original 5-line core
+
+═══════════════════════════════════════════════════════════
+
+RESPOND IN THIS JSON FORMAT:
+{
+  "line1": "...",
+  "line2": "...",
+  "line3": "...",
+  "line4": "...",
+  "line5": "...",
+  "line6": "...",
+  "line7": "...",
+  "line8": "...",
+  "line9": "...",
+  "line10": "...",
+  "line11": "...",
+  "line12": "...",
+  "line13": "...",
+  "line14": "...",
+  "line15": "...",
+  "metadata": {
+    "language": "pt|en|es|fr|de",
+    "tone": "inspirational|practical|emotional|etc",
+    "beatDistribution": {
+      "situation": [1,2,3],
+      "desire": [4,5,6],
+      "conflict": [7,8,9,10,11],
+      "change": [12,13],
+      "result": [14,15]
+    }
+  }
+}
+
+Return ONLY the JSON, no additional text.`;
+
+// ============================================
+// PROMPT: Expandir para 20 Linhas (4-4-7-3-2)
+// ============================================
+const EXPAND_TO_20_LINES_PROMPT = `You are expanding to 20 lines (maximum depth) using the 5-Lines-Story methodology.
+
+CRITICAL PRINCIPLE: You are ZOOMING IN on the existing 5 beats, NOT adding new story beats.
+
+═══════════════════════════════════════════════════════════
+
+MANDATORY STRUCTURE - 20 LINES (4-4-7-3-2 distribution):
+
+**Lines 1-4: SITUATION**
+- Line 1: Identity and credentials
+- Line 2: Origin story/background
+- Line 3: Journey to present
+- Line 4: Current state and environment
+
+**Lines 5-8: DESIRE**
+- Line 5: Initial spark of desire
+- Line 6: Surface-level goal
+- Line 7: Deeper emotional need
+- Line 8: Specific vision with stakes
+
+**Lines 9-15: CONFLICT** ← 35% of lines, maximum detail
+- Line 9: First obstacle encountered
+- Line 10: Initial response/attempt
+- Line 11: Failure and its impact
+- Line 12: Internal doubts surface
+- Line 13: External pressures increase
+- Line 14: Specific fears named
+- Line 15: Rock bottom/complete surrender (OVERLAP: begins change)
+
+**Lines 16-18: CHANGE**
+- Line 16: First shift (often false)
+- Line 17: Deeper questioning/exploration
+- Line 18: Genuine breakthrough moment
+
+**Lines 19-20: RESULT**
+- Line 19: Tangible outcome/proof of change
+- Line 20: Meta-awareness/ongoing journey/larger impact
+
+═══════════════════════════════════════════════════════════
+
+CRITICAL RULES:
+
+1. ✅ ZOOM IN to maximum depth, don't add new beats
+2. ✅ MAINTAIN CAUSAL FLOW within each beat
+3. ✅ USE OVERLAP TECHNIQUE (Line 15 ends conflict, begins change)
+4. ✅ RESPECT USER METADATA exclusively
+5. ✅ KEEP EACH LINE: 15-35 words
+6. ✅ CONFLICT GETS 7 LINES (35% of total) - this is intentional
+7. ✅ RESULT STAYS CONCISE (2 lines only) - don't linger
+8. ✅ COMPRESSION TEST: Must compress back to original 5-line core
+
+═══════════════════════════════════════════════════════════
+
+RESPOND IN THIS JSON FORMAT:
+{
+  "line1": "...",
+  "line2": "...",
+  "line3": "...",
+  "line4": "...",
+  "line5": "...",
+  "line6": "...",
+  "line7": "...",
+  "line8": "...",
+  "line9": "...",
+  "line10": "...",
+  "line11": "...",
+  "line12": "...",
+  "line13": "...",
+  "line14": "...",
+  "line15": "...",
+  "line16": "...",
+  "line17": "...",
+  "line18": "...",
+  "line19": "...",
+  "line20": "...",
+  "metadata": {
+    "language": "pt|en|es|fr|de",
+    "tone": "inspirational|practical|emotional|etc",
+    "beatDistribution": {
+      "situation": [1,2,3,4],
+      "desire": [5,6,7,8],
+      "conflict": [9,10,11,12,13,14,15],
+      "change": [16,17,18],
+      "result": [19,20]
+    }
+  }
+}
+
+Return ONLY the JSON, no additional text.`;
+
+// ============================================
+// PROMPT: Validação por Compressão
+// ============================================
+const COMPRESSION_TEST_PROMPT = `You are validating a story expansion by compressing it back to 5 lines.
+
+TASK: Compress the expanded story back to its 5 core beats to verify no story drift occurred.
+
+COMPRESSION RULES:
+1. Each compressed line should capture the ESSENCE of its beat
+2. Compare with the original 5-line story provided
+3. Check if the core narrative remains the same
+4. Identify any drift (new plot points, contradictions, added events)
+
+RESPOND IN THIS JSON FORMAT:
+{
+  "compressed": {
+    "line1": "Compressed situation/context",
+    "line2": "Compressed desire/objective",
+    "line3": "Compressed obstacle/conflict",
+    "line4": "Compressed action/change",
+    "line5": "Compressed result/transformation"
+  },
+  "matchesOriginal": true/false,
+  "driftAnalysis": "Description of any drift from original core, or 'No drift detected' if matches",
+  "issues": ["issue1", "issue2"] // or empty array if no issues
+}
+
+Return ONLY the JSON, no additional text.`;
+
+// ============================================
 // FUNÇÕES AUXILIARES
 // ============================================
 
@@ -192,11 +522,16 @@ function detectLanguage(text) {
  */
 function estimateTokens(operation) {
   const estimates = {
-    'suggest_paths': 400,  // Input + 3 sugestões
-    'generate_story': 500,  // Input + caminho + 5 linhas
-    'refine_line': 350,     // História atual + refinamento
+    'suggest_paths': 400,              // Input + 3 sugestões
+    'generate_story': 500,              // Input + caminho + 5 linhas
+    'refine_line': 350,                 // História atual + refinamento
+    'extract_metadata': 300,            // Análise de input do usuário
+    'expand_to_10': 600,                // Input + metadata + 10 linhas
+    'expand_to_15': 850,                // Input + metadata + 15 linhas
+    'expand_to_20': 1100,               // Input + metadata + 20 linhas
+    'compression_test': 450,            // História expandida + compressão
   };
-  
+
   return estimates[operation] || 400;
 }
 
@@ -208,16 +543,91 @@ function getPrompt(operation) {
     'suggest_paths': SUGGEST_PATHS_PROMPT,
     'generate_story': GENERATE_STORY_PROMPT,
     'refine_line': REFINE_LINE_PROMPT,
+    'extract_metadata': EXTRACT_USER_INPUT_METADATA_PROMPT,
+    'expand_to_10': EXPAND_TO_10_LINES_PROMPT,
+    'expand_to_15': EXPAND_TO_15_LINES_PROMPT,
+    'expand_to_20': EXPAND_TO_20_LINES_PROMPT,
+    'compression_test': COMPRESSION_TEST_PROMPT,
   };
-  
+
   return prompts[operation];
 }
 
+/**
+ * Get expansion prompt based on target story level
+ */
+function getExpansionPrompt(targetLevel) {
+  const prompts = {
+    10: EXPAND_TO_10_LINES_PROMPT,
+    15: EXPAND_TO_15_LINES_PROMPT,
+    20: EXPAND_TO_20_LINES_PROMPT,
+  };
+
+  return prompts[targetLevel];
+}
+
+/**
+ * Get beat distribution for a story level
+ */
+function getBeatDistribution(storyLevel) {
+  const distributions = {
+    5: [1, 1, 1, 1, 1],           // Situation, Desire, Conflict, Change, Result
+    10: [3, 2, 3, 2, 1],
+    15: [3, 3, 5, 2, 2],
+    20: [4, 4, 7, 3, 2],
+  };
+
+  return distributions[storyLevel] || distributions[5];
+}
+
+/**
+ * Validate story level progression (must go 5→10→15→20)
+ */
+function validateExpansionPath(currentLevel, targetLevel) {
+  const validTransitions = {
+    5: [10],
+    10: [15],
+    15: [20],
+    20: [], // Cannot expand further
+  };
+
+  const allowed = validTransitions[currentLevel] || [];
+  return allowed.includes(targetLevel);
+}
+
+/**
+ * Get next available expansion level
+ */
+function getNextExpansionLevel(currentLevel) {
+  const nextLevels = {
+    5: 10,
+    10: 15,
+    15: 20,
+    20: null, // Max level
+  };
+
+  return nextLevels[currentLevel];
+}
+
 module.exports = {
+  // Original prompts
   SUGGEST_PATHS_PROMPT,
   GENERATE_STORY_PROMPT,
   REFINE_LINE_PROMPT,
+
+  // New expansion prompts
+  EXTRACT_USER_INPUT_METADATA_PROMPT,
+  EXPAND_TO_10_LINES_PROMPT,
+  EXPAND_TO_15_LINES_PROMPT,
+  EXPAND_TO_20_LINES_PROMPT,
+  COMPRESSION_TEST_PROMPT,
+
+  // Helper functions
   detectLanguage,
   estimateTokens,
   getPrompt,
+  getExpansionPrompt,
+  getBeatDistribution,
+  validateExpansionPath,
+  getNextExpansionLevel,
 };
