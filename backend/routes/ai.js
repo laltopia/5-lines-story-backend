@@ -218,6 +218,36 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
 
     await ensureUserTracking(userId);
 
+    // ============================================
+    // STEP 1: Extract metadata from user input
+    // ============================================
+    const metadataPrompt = getPrompt('extract_metadata');
+    const metadataUserMessage = `USER'S INPUT:\n${sanitizedInput}\n\nEXISTING METADATA:\n{}`;
+
+    const { content: metadataContent, usage: metadataUsage } = await callClaude(metadataPrompt, metadataUserMessage);
+
+    let extractedMetadata;
+    try {
+      const jsonMatch = metadataContent.match(/\{[\s\S]*\}/);
+      extractedMetadata = JSON.parse(jsonMatch ? jsonMatch[0] : metadataContent);
+    } catch (parseError) {
+      console.error('Metadata extraction error:', parseError);
+      extractedMetadata = { newCharacters: [], newSettings: [], newFacts: [], newEmotionalThemes: [] };
+    }
+
+    // Build accumulated metadata for first story
+    const accumulatedMetadata = {
+      characters: extractedMetadata.newCharacters || [],
+      settings: extractedMetadata.newSettings || [],
+      keyFacts: extractedMetadata.newFacts || [],
+      emotionalThemes: extractedMetadata.newEmotionalThemes || [],
+      tone: extractedMetadata.tone || 'neutral',
+      language: detectLanguage(sanitizedInput)
+    };
+
+    // ============================================
+    // STEP 2: Generate the story
+    // ============================================
     let fullPrompt = `INPUT ORIGINAL:\n${sanitizedInput}\n\n`;
 
     if (sanitizedCustomDesc) {
@@ -249,8 +279,10 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
       });
     }
 
-    const totalTokens = usage.input_tokens + usage.output_tokens;
-    const costUsd = calculateCost(usage.input_tokens, usage.output_tokens);
+    const totalTokens = (usage.input_tokens + usage.output_tokens) +
+                       (metadataUsage.input_tokens + metadataUsage.output_tokens);
+    const costUsd = calculateCost(usage.input_tokens, usage.output_tokens) +
+                    calculateCost(metadataUsage.input_tokens, metadataUsage.output_tokens);
 
     // Extract title from selectedPath or use custom description or generate from userInput
     let storyTitle = null;
@@ -264,6 +296,21 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
       storyTitle = userInput.substring(0, 100);
     }
 
+    // ============================================
+    // STEP 3: Build user inputs history
+    // ============================================
+    const userInputsHistory = [{
+      inputNumber: 1,
+      storyLevel: 5,
+      rawInput: userInput,
+      inputType: inputType || 'text',
+      extractedMetadata: extractedMetadata,
+      timestamp: new Date().toISOString()
+    }];
+
+    // ============================================
+    // STEP 4: Save story with expansion metadata
+    // ============================================
     const { data: conversationData, error: convError } = await supabase
       .from('conversations')
       .insert([{
@@ -274,10 +321,15 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
         prompt_type: 'generate_story',
         user_id: userId,
         tokens_used: totalTokens,
-        input_tokens: usage.input_tokens,
-        output_tokens: usage.output_tokens,
+        input_tokens: usage.input_tokens + metadataUsage.input_tokens,
+        output_tokens: usage.output_tokens + metadataUsage.output_tokens,
         input_type: inputType || 'text',
-        original_file_info: originalFileInfo || null
+        original_file_info: originalFileInfo || null,
+        // EXPANSION SUPPORT FIELDS
+        story_level: 5,
+        parent_story_id: null,
+        accumulated_metadata: accumulatedMetadata,
+        user_inputs_history: userInputsHistory
       }])
       .select()
       .single();
@@ -297,8 +349,8 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
       user_id: userId,
       prompt_type: 'generate_story',
       tokens_used: totalTokens,
-      input_tokens: usage.input_tokens,
-      output_tokens: usage.output_tokens,
+      input_tokens: usage.input_tokens + metadataUsage.input_tokens,
+      output_tokens: usage.output_tokens + metadataUsage.output_tokens,
       cost_usd: costUsd,
       conversation_id: conversationData.id,
       metadata: usageMetadata
@@ -312,10 +364,13 @@ router.post('/generate-story', requireAuthentication, validate(aiSchemas.generat
       story: storyData.story,
       metadata: storyData.metadata,
       conversationId: conversationData.id,
+      storyLevel: 5,
+      parentStoryId: null,
+      accumulatedMetadata: accumulatedMetadata,
       usage: {
         tokensUsed: totalTokens,
-        inputTokens: usage.input_tokens,
-        outputTokens: usage.output_tokens,
+        inputTokens: usage.input_tokens + metadataUsage.input_tokens,
+        outputTokens: usage.output_tokens + metadataUsage.output_tokens,
         costUsd: costUsd.toFixed(6)
       }
     });
@@ -1256,20 +1311,21 @@ router.post('/expand-story', requireAuthentication, validate(aiSchemas.expandSto
     await incrementStoryCount(userId);
     await updateTokenUsage(userId, totalTokens);
 
-    // 15. Return response
+    // 15. Return response (format must match frontend expectations)
     res.json({
       success: true,
-      expandedStory: storyLines,
+      story: storyLines,  // Frontend expects "story", not "expandedStory"
+      storyLevel: targetLevel,  // Frontend expects at root level
+      parentStoryId: conversationId,  // Frontend expects at root level
+      conversationId: newConversation.id,
+      accumulatedMetadata: accumulatedMetadata,
       metadata: {
-        storyLevel: targetLevel,
-        parentStoryId: conversationId,
         fromLevel: currentLevel,
+        toLevel: targetLevel,
         distribution: getBeatDistribution(targetLevel).join('-'),
-        accumulatedMetadata: accumulatedMetadata,
         language: accumulatedMetadata.language,
         tone: expandedStory.metadata?.tone || accumulatedMetadata.tone
       },
-      conversationId: newConversation.id,
       usage: {
         tokensUsed: totalTokens,
         inputTokens: metadataUsage.input_tokens + expansionUsage.input_tokens,
